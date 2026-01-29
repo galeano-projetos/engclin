@@ -1,0 +1,130 @@
+"use server";
+
+import { prisma } from "@/lib/db";
+import { getTenantId } from "@/lib/tenant";
+import { checkPermission } from "@/lib/auth/require-role";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { Criticality, EquipmentStatus } from "@prisma/client";
+
+interface EquipmentFormData {
+  name: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  patrimony?: string;
+  unitId: string;
+  criticality: Criticality;
+  status: EquipmentStatus;
+  acquisitionDate?: string;
+  acquisitionValue?: string;
+}
+
+function parseFormData(formData: FormData): EquipmentFormData {
+  return {
+    name: formData.get("name") as string,
+    brand: (formData.get("brand") as string) || undefined,
+    model: (formData.get("model") as string) || undefined,
+    serialNumber: (formData.get("serialNumber") as string) || undefined,
+    patrimony: (formData.get("patrimony") as string) || undefined,
+    unitId: formData.get("unitId") as string,
+    criticality: (formData.get("criticality") as Criticality) || "C",
+    status: (formData.get("status") as EquipmentStatus) || "ATIVO",
+    acquisitionDate: (formData.get("acquisitionDate") as string) || undefined,
+    acquisitionValue: (formData.get("acquisitionValue") as string) || undefined,
+  };
+}
+
+export async function createEquipmentAction(
+  _prevState: { error?: string } | undefined,
+  formData: FormData
+) {
+  return createEquipment(formData);
+}
+
+export async function createEquipment(formData: FormData) {
+  await checkPermission("equipment.create");
+  const tenantId = await getTenantId();
+  const data = parseFormData(formData);
+
+  if (!data.name || !data.unitId) {
+    return { error: "Nome e Setor são obrigatórios." };
+  }
+
+  await prisma.equipment.create({
+    data: {
+      tenantId,
+      unitId: data.unitId,
+      name: data.name,
+      brand: data.brand,
+      model: data.model,
+      serialNumber: data.serialNumber,
+      patrimony: data.patrimony,
+      criticality: data.criticality,
+      status: data.status,
+      acquisitionDate: data.acquisitionDate
+        ? new Date(data.acquisitionDate)
+        : undefined,
+      acquisitionValue: data.acquisitionValue
+        ? parseFloat(data.acquisitionValue)
+        : undefined,
+    },
+  });
+
+  revalidatePath("/equipamentos");
+  redirect("/equipamentos");
+}
+
+export async function updateEquipmentAction(
+  _prevState: { error?: string } | undefined,
+  formData: FormData
+) {
+  const id = formData.get("_equipmentId") as string;
+  return updateEquipment(id, formData);
+}
+
+export async function updateEquipment(id: string, formData: FormData) {
+  await checkPermission("equipment.edit");
+  const tenantId = await getTenantId();
+  const data = parseFormData(formData);
+
+  if (!data.name || !data.unitId) {
+    return { error: "Nome e Setor são obrigatórios." };
+  }
+
+  await prisma.equipment.update({
+    where: { id, tenantId },
+    data: {
+      unitId: data.unitId,
+      name: data.name,
+      brand: data.brand,
+      model: data.model,
+      serialNumber: data.serialNumber,
+      patrimony: data.patrimony,
+      criticality: data.criticality,
+      status: data.status,
+      acquisitionDate: data.acquisitionDate
+        ? new Date(data.acquisitionDate)
+        : null,
+      acquisitionValue: data.acquisitionValue
+        ? parseFloat(data.acquisitionValue)
+        : null,
+    },
+  });
+
+  revalidatePath("/equipamentos");
+  redirect("/equipamentos");
+}
+
+export async function deleteEquipment(id: string) {
+  await checkPermission("equipment.delete");
+  const tenantId = await getTenantId();
+
+  await prisma.equipment.update({
+    where: { id, tenantId },
+    data: { status: "DESCARTADO" },
+  });
+
+  revalidatePath("/equipamentos");
+  redirect("/equipamentos");
+}

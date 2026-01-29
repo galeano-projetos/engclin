@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// TENANT (Hospital / Clínica — o cliente SaaS)
+// ============================================================
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String   // Nome do hospital/clínica
+  cnpj      String   @unique
+  plan      Plan     @default(ESSENCIAL)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  units      Unit[]
+  equipments Equipment[]
+
+  @@map("tenants")
+}
+
+enum Plan {
+  ESSENCIAL
+  PROFISSIONAL
+  ENTERPRISE
+}
+
+// ============================================================
+// USER (Usuário do sistema)
+// ============================================================
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(COORDENADOR)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Unidades que o usuário pode acessar
+  units UserUnit[]
+
+  // Chamados abertos pelo usuário (coordenador)
+  openedTickets CorrectiveMaintenance[] @relation("TicketOpener")
+  // Chamados atendidos pelo usuário (técnico)
+  assignedTickets CorrectiveMaintenance[] @relation("TicketAssignee")
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum UserRole {
+  MASTER
+  TECNICO
+  COORDENADOR
+  FISCAL
+}
+
+// ============================================================
+// UNIT (Setor / Unidade de produção)
+// ============================================================
+model Unit {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String   // Ex: "UTI", "Centro Cirúrgico", "Radiologia"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users      UserUnit[]
+  equipments Equipment[]
+
+  @@index([tenantId])
+  @@map("units")
+}
+
+// Tabela de junção: quais unidades cada usuário pode acessar
+model UserUnit {
+  userId String
+  unitId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@id([userId, unitId])
+  @@map("user_units")
+}
+
+// ============================================================
+// EQUIPMENT (Equipamento médico)
+// ============================================================
+model Equipment {
+  id            String          @id @default(cuid())
+  tenantId      String
+  unitId        String
+  name          String
+  brand         String?         // Marca
+  model         String?         // Modelo
+  serialNumber  String?         // Número de série
+  patrimony     String?         // Patrimônio
+  criticality   Criticality     @default(C)
+  status        EquipmentStatus @default(ATIVO)
+  acquisitionDate DateTime?
+  acquisitionValue Float?
+  photoUrl      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  preventiveMaintenances PreventiveMaintenance[]
+  correctiveMaintenances CorrectiveMaintenance[]
+  medicalPhysicsTests    MedicalPhysicsTest[]
+
+  @@index([tenantId])
+  @@index([unitId])
+  @@map("equipments")
+}
+
+enum Criticality {
+  A
+  B
+  C
+}
+
+enum EquipmentStatus {
+  ATIVO
+  INATIVO
+  EM_MANUTENCAO
+  DESCARTADO
+}
+
+// ============================================================
+// PREVENTIVE MAINTENANCE (Calibração / Preventiva)
+// ============================================================
+model PreventiveMaintenance {
+  id              String            @id @default(cuid())
+  tenantId        String
+  equipmentId     String
+  type            String            // Ex: "Calibração", "Teste de Segurança Elétrica"
+  scheduledDate   DateTime          // Data agendada
+  dueDate         DateTime          // Data de vencimento
+  executionDate   DateTime?         // Data em que foi realizada
+  status          MaintenanceStatus @default(AGENDADA)
+  provider        String?           // Fornecedor/empresa externa
+  cost            Float?            // Valor do serviço
+  certificateUrl  String?           // URL do certificado anexado
+  notes           String?
+  periodicityMonths Int             @default(12) // Periodicidade em meses
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@map("preventive_maintenances")
+}
+
+enum MaintenanceStatus {
+  AGENDADA
+  REALIZADA
+  VENCIDA
+}
+
+// ============================================================
+// CORRECTIVE MAINTENANCE (Chamado / Corretiva)
+// ============================================================
+model CorrectiveMaintenance {
+  id            String       @id @default(cuid())
+  tenantId      String
+  equipmentId   String
+  openedById    String       // Coordenador que abriu
+  assignedToId  String?      // Técnico que atendeu
+  description   String       // Descrição do problema
+  urgency       Urgency      @default(MEDIA)
+  status        TicketStatus @default(ABERTO)
+  diagnosis     String?      // Diagnóstico do técnico
+  solution      String?      // O que foi feito
+  partsUsed     String?      // Peças utilizadas
+  timeSpent     Int?         // Tempo gasto em minutos
+  cost          Float?       // Custo do reparo
+  openedAt      DateTime     @default(now())
+  closedAt      DateTime?
+  updatedAt     DateTime     @updatedAt
+
+  equipment  Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  openedBy   User      @relation("TicketOpener", fields: [openedById], references: [id])
+  assignedTo User?     @relation("TicketAssignee", fields: [assignedToId], references: [id])
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@map("corrective_maintenances")
+}
+
+enum Urgency {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum TicketStatus {
+  ABERTO
+  EM_ATENDIMENTO
+  RESOLVIDO
+  FECHADO
+}
+
+// ============================================================
+// MEDICAL PHYSICS TEST (Física Médica)
+// ============================================================
+model MedicalPhysicsTest {
+  id            String                @id @default(cuid())
+  tenantId      String
+  equipmentId   String
+  type          MedicalPhysicsType
+  scheduledDate DateTime
+  dueDate       DateTime
+  executionDate DateTime?
+  status        MaintenanceStatus     @default(AGENDADA)
+  provider      String?               // Empresa de física médica
+  reportUrl     String?               // URL do laudo
+  notes         String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@map("medical_physics_tests")
+}
+
+enum MedicalPhysicsType {
+  CONTROLE_QUALIDADE
+  TESTE_CONSTANCIA
+  LEVANTAMENTO_RADIOMETRICO
+  TESTE_RADIACAO_FUGA
+}

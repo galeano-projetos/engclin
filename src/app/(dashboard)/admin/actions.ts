@@ -1,0 +1,128 @@
+"use server";
+
+import { prisma } from "@/lib/db";
+import { checkPermission } from "@/lib/auth/require-role";
+import { revalidatePath } from "next/cache";
+import { hashSync } from "bcryptjs";
+
+// ============================================================
+// Gestão de Unidades
+// ============================================================
+
+export async function createUnit(formData: FormData) {
+  const { tenantId } = await checkPermission("admin.units");
+  const name = formData.get("name") as string;
+
+  if (!name?.trim()) {
+    return { error: "Nome da unidade é obrigatório" };
+  }
+
+  await prisma.unit.create({
+    data: { tenantId, name: name.trim() },
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function deleteUnit(unitId: string) {
+  const { tenantId } = await checkPermission("admin.units");
+
+  // Verificar se há equipamentos vinculados
+  const equipCount = await prisma.equipment.count({
+    where: { unitId, tenantId },
+  });
+
+  if (equipCount > 0) {
+    return {
+      error: `Esta unidade possui ${equipCount} equipamento(s) vinculado(s). Transfira-os antes de excluir.`,
+    };
+  }
+
+  await prisma.unit.delete({ where: { id: unitId } });
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// ============================================================
+// Gestão de Usuários
+// ============================================================
+
+export async function createUser(formData: FormData) {
+  const { tenantId } = await checkPermission("admin.users");
+
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const role = formData.get("role") as string;
+
+  if (!name?.trim() || !email?.trim() || !password?.trim() || !role) {
+    return { error: "Todos os campos são obrigatórios" };
+  }
+
+  // Verificar se email já existe
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return { error: "Este e-mail já está cadastrado" };
+  }
+
+  const hashedPassword = hashSync(password, 10);
+
+  await prisma.user.create({
+    data: {
+      tenantId,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashedPassword,
+      role: role as "MASTER" | "TECNICO" | "COORDENADOR" | "FISCAL",
+    },
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+export async function toggleUserActive(userId: string) {
+  const { tenantId } = await checkPermission("admin.users");
+
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenantId },
+  });
+
+  if (!user) {
+    return { error: "Usuário não encontrado" };
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { active: !user.active },
+  });
+
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// ============================================================
+// Dados para a página de admin
+// ============================================================
+
+export async function getAdminData() {
+  const { tenantId } = await checkPermission("admin.users");
+
+  const [units, users, tenant] = await Promise.all([
+    prisma.unit.findMany({
+      where: { tenantId },
+      include: { _count: { select: { equipments: true } } },
+      orderBy: { name: "asc" },
+    }),
+    prisma.user.findMany({
+      where: { tenantId },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+    }),
+  ]);
+
+  return { units, users, tenant };
+}
