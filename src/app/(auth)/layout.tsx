@@ -1,4 +1,5 @@
 import { SessionProviderWrapper } from "@/components/layout/session-provider-wrapper";
+import { AuthBackground } from "./auth-background";
 
 export default function AuthLayout({
   children,
@@ -7,9 +8,7 @@ export default function AuthLayout({
 }) {
   return (
     <SessionProviderWrapper>
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        {children}
-      </div>
+      <AuthBackground>{children}</AuthBackground>
     </SessionProviderWrapper>
   );
 }

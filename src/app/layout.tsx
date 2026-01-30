@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "EngClin - Gestão de Engenharia Clínica",
+  title: "Vitalis - Gestão de Equipamentos com IA",
   description:
-    "Sistema SaaS para gestão de parque tecnológico de engenharia clínica",
+    "Sistema SaaS para gestão de equipamentos com inteligência artificial",
 };
 
 export default function RootLayout({

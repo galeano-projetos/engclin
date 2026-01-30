@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VitalisLogo } from "@/components/ui/vitalis-logo";
 
 const roleLabels: Record<string, string> = {
   MASTER: "Engenheira Clínica",
@@ -41,7 +42,7 @@ export function Header({ userName, tenantName, userRole, onMenuToggle }: HeaderP
           </svg>
         </button>
 
-        <h1 className="text-lg font-bold text-gray-900">EngClin</h1>
+        <VitalisLogo size="sm" />
 
         {tenantName && (
           <span className="hidden text-sm text-gray-400 sm:inline">

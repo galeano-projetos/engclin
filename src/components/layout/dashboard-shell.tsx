@@ -24,20 +24,25 @@ export function DashboardShell({
 
   return (
     <SessionProvider>
-      <div className="min-h-screen bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-gray-50">
         <Header
           userName={userName}
           tenantName={tenantName}
           userRole={userRole}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        <div className="flex">
+        <div className="flex flex-1">
           <Sidebar
             open={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
             navPermissions={navPermissions}
           />
-          <main className="flex-1 p-4 lg:p-6">{children}</main>
+          <div className="flex flex-1 flex-col">
+            <main className="flex-1 p-4 lg:p-6">{children}</main>
+            <footer className="border-t bg-white px-4 py-3 text-center text-xs text-gray-400">
+              Uma empresa <span className="font-semibold text-gray-500">Seprorad</span>
+            </footer>
+          </div>
         </div>
       </div>
     </SessionProvider>
