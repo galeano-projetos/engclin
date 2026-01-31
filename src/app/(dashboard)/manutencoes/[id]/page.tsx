@@ -15,6 +15,7 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
     where: { id, tenantId },
     include: {
       equipment: { select: { name: true, patrimony: true, id: true } },
+      providerRef: { select: { name: true } },
     },
   });
 
@@ -33,13 +34,14 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
       maintenance={{
         id: maintenance.id,
         type: maintenance.type,
+        serviceType: maintenance.serviceType,
         status: maintenance.status,
         displayStatus,
         scheduledDate: maintenance.scheduledDate.toISOString(),
         dueDate: maintenance.dueDate.toISOString(),
         executionDate: maintenance.executionDate?.toISOString() || null,
         periodicityMonths: maintenance.periodicityMonths,
-        provider: maintenance.provider,
+        provider: maintenance.providerRef?.name || maintenance.provider,
         cost: maintenance.cost,
         certificateUrl: maintenance.certificateUrl,
         notes: maintenance.notes,

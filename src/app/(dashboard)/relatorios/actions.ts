@@ -48,7 +48,7 @@ export async function getInventoryReport(): Promise<ReportData> {
       serialNumber: e.serialNumber,
       patrimony: e.patrimony,
       unit: e.unit.name,
-      criticality: e.criticality,
+      criticality: e.criticality === "A" ? "1 - Critico" : e.criticality === "B" ? "2 - Moderado" : "3 - Baixo",
       status: statusLabel(e.status),
       acquisitionDate: e.acquisitionDate
         ? e.acquisitionDate.toLocaleDateString("pt-BR")

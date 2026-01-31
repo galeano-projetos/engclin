@@ -86,9 +86,9 @@ export function EquipmentFilters({ units }: EquipmentFiltersProps) {
         placeholder="Todas"
         value={searchParams.get("criticality") || ""}
         options={[
-          { value: "A", label: "A — Alta" },
-          { value: "B", label: "B — Média" },
-          { value: "C", label: "C — Baixa" },
+          { value: "A", label: "1 - Critico" },
+          { value: "B", label: "2 - Moderado" },
+          { value: "C", label: "3 - Baixo" },
         ]}
         onChange={(e) => handleFilterChange("criticality", e.target.value)}
       />

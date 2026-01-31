@@ -275,9 +275,9 @@ export async function runPrioritizationAgent(): Promise<PrioritizationInsight[]>
   const now = new Date();
 
   const criticalityLabels: Record<string, string> = {
-    A: "Alta",
-    B: "Média",
-    C: "Baixa",
+    A: "1 - Critico",
+    B: "2 - Moderado",
+    C: "3 - Baixo",
   };
 
   const urgencyLabels: Record<string, string> = {

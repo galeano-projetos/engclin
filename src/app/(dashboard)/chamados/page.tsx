@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
+import { auth } from "@/lib/auth";
+import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TicketFilters } from "./ticket-filters";
-import { TicketStatus, Urgency } from "@prisma/client";
+import { TicketStatus, Urgency, UserRole } from "@prisma/client";
 
 const statusLabels: Record<TicketStatus, string> = {
   ABERTO: "Aberto",
@@ -43,6 +45,9 @@ interface PageProps {
 
 export default async function ChamadosPage({ searchParams }: PageProps) {
   const tenantId = await getTenantId();
+  const session = await auth();
+  const role = (session?.user as { role: string })?.role as UserRole;
+  const canCreate = hasPermission(role, "ticket.create");
   const params = await searchParams;
   const { status, urgency } = params;
 
@@ -69,9 +74,11 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
             {tickets.length} chamado{tickets.length !== 1 && "s"} encontrado{tickets.length !== 1 && "s"}
           </p>
         </div>
-        <Link href="/chamados/novo">
-          <Button>Novo Chamado</Button>
-        </Link>
+        {canCreate && (
+          <Link href="/chamados/novo">
+            <Button>Novo Chamado</Button>
+          </Link>
+        )}
       </div>
 
       <TicketFilters />

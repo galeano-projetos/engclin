@@ -1,7 +1,7 @@
 import { UserRole } from "@prisma/client";
 
 /**
- * Mapa de permissões por funcionalidade e role.
+ * Mapa de permissoes por funcionalidade e role.
  * true = permitido, false/ausente = negado.
  */
 const permissions: Record<string, UserRole[]> = {
@@ -11,7 +11,7 @@ const permissions: Record<string, UserRole[]> = {
   "equipment.edit": ["MASTER", "TECNICO"],
   "equipment.delete": ["MASTER"],
 
-  // Manutenções Preventivas
+  // Manutencoes Preventivas
   "preventive.view": ["MASTER", "TECNICO", "COORDENADOR", "FISCAL"],
   "preventive.create": ["MASTER", "TECNICO"],
   "preventive.execute": ["MASTER", "TECNICO"],
@@ -24,24 +24,45 @@ const permissions: Record<string, UserRole[]> = {
   "ticket.resolve": ["MASTER", "TECNICO"],
   "ticket.close": ["MASTER", "TECNICO", "COORDENADOR"],
 
-  // Física Médica
+  // Fisica Medica
   "physics.view": ["MASTER", "TECNICO", "FISCAL"],
   "physics.create": ["MASTER", "TECNICO"],
   "physics.execute": ["MASTER", "TECNICO"],
   "physics.delete": ["MASTER"],
 
-  // Relatórios
+  // Relatorios
   "report.view": ["MASTER", "TECNICO", "FISCAL"],
 
   // Dashboard
   "dashboard.view": ["MASTER", "TECNICO", "COORDENADOR", "FISCAL"],
 
-  // Inteligência Artificial
+  // Inteligencia Artificial
   "ai.view": ["MASTER", "TECNICO"],
 
-  // Administração
+  // Administracao
   "admin.users": ["MASTER"],
   "admin.units": ["MASTER"],
+
+  // Fornecedores
+  "provider.view": ["MASTER", "TECNICO"],
+  "provider.create": ["MASTER"],
+  "provider.edit": ["MASTER"],
+  "provider.delete": ["MASTER"],
+
+  // Tipos de Equipamento
+  "equipmentType.view": ["MASTER", "TECNICO"],
+  "equipmentType.create": ["MASTER"],
+  "equipmentType.edit": ["MASTER"],
+  "equipmentType.delete": ["MASTER"],
+
+  // Contratos
+  "contract.view": ["MASTER", "TECNICO"],
+  "contract.create": ["MASTER"],
+  "contract.edit": ["MASTER"],
+  "contract.delete": ["MASTER"],
+
+  // Importacao
+  "import.execute": ["MASTER"],
 };
 
 export function hasPermission(role: UserRole, permission: string): boolean {
@@ -56,7 +77,7 @@ export function getAllowedPermissions(role: UserRole): string[] {
     .map(([perm]) => perm);
 }
 
-/** Itens de navegação visíveis por role */
+/** Itens de navegacao visiveis por role */
 export interface NavPermissions {
   dashboard: boolean;
   equipamentos: boolean;

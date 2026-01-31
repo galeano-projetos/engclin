@@ -3,10 +3,10 @@
 import { prisma } from "@/lib/db";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
-import { hashSync } from "bcryptjs";
+import { hash } from "bcryptjs";
 
 // ============================================================
-// Gestão de Unidades
+// Gestao de Unidades
 // ============================================================
 
 export async function createUnit(formData: FormData) {
@@ -14,7 +14,7 @@ export async function createUnit(formData: FormData) {
   const name = formData.get("name") as string;
 
   if (!name?.trim()) {
-    return { error: "Nome da unidade é obrigatório" };
+    return { error: "Nome da unidade e obrigatorio" };
   }
 
   await prisma.unit.create({
@@ -28,7 +28,7 @@ export async function createUnit(formData: FormData) {
 export async function deleteUnit(unitId: string) {
   const { tenantId } = await checkPermission("admin.units");
 
-  // Verificar se há equipamentos vinculados
+  // Verificar se ha equipamentos vinculados
   const equipCount = await prisma.equipment.count({
     where: { unitId, tenantId },
   });
@@ -39,13 +39,13 @@ export async function deleteUnit(unitId: string) {
     };
   }
 
-  await prisma.unit.delete({ where: { id: unitId } });
+  await prisma.unit.delete({ where: { id: unitId, tenantId } });
   revalidatePath("/admin");
   return { success: true };
 }
 
 // ============================================================
-// Gestão de Usuários
+// Gestao de Usuarios
 // ============================================================
 
 export async function createUser(formData: FormData) {
@@ -57,16 +57,16 @@ export async function createUser(formData: FormData) {
   const role = formData.get("role") as string;
 
   if (!name?.trim() || !email?.trim() || !password?.trim() || !role) {
-    return { error: "Todos os campos são obrigatórios" };
+    return { error: "Todos os campos sao obrigatorios" };
   }
 
-  // Verificar se email já existe
+  // Verificar se email ja existe
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    return { error: "Este e-mail já está cadastrado" };
+    return { error: "Este e-mail ja esta cadastrado" };
   }
 
-  const hashedPassword = hashSync(password, 10);
+  const hashedPassword = await hash(password, 10);
 
   await prisma.user.create({
     data: {
@@ -90,7 +90,7 @@ export async function toggleUserActive(userId: string) {
   });
 
   if (!user) {
-    return { error: "Usuário não encontrado" };
+    return { error: "Usuario nao encontrado" };
   }
 
   await prisma.user.update({
@@ -103,7 +103,7 @@ export async function toggleUserActive(userId: string) {
 }
 
 // ============================================================
-// Dados para a página de admin
+// Dados para a pagina de admin
 // ============================================================
 
 export async function getAdminData() {

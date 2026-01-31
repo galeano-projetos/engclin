@@ -1,6 +1,14 @@
 import { requirePermission } from "@/lib/auth/require-role";
 import { getAdminData } from "./actions";
 import { AdminPanel } from "./admin-panel";
+import Link from "next/link";
+
+const adminLinks = [
+  { href: "/admin/fornecedores", label: "Fornecedores", description: "Cadastro de empresas prestadoras de servicos" },
+  { href: "/admin/tipos-equipamento", label: "Tipos de Equipamento", description: "Periodicidades padrao por tipo" },
+  { href: "/admin/contratos", label: "Contratos", description: "Contratos com fornecedores" },
+  { href: "/admin/importar", label: "Importar Dados", description: "Importacao via planilha Excel" },
+];
 
 export default async function AdminPage() {
   await requirePermission("admin.users");
@@ -23,11 +31,23 @@ export default async function AdminPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Administração</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Administracao</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Gerencie usuários, unidades e configurações do tenant{" "}
+        Gerencie usuarios, unidades e configuracoes do tenant{" "}
         <span className="font-medium">{tenant?.name}</span>.
       </p>
+
+      {/* Admin quick links */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {adminLinks.map((link) => (
+          <Link key={link.href} href={link.href}>
+            <div className="rounded-lg border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <p className="font-medium text-gray-900">{link.label}</p>
+              <p className="mt-1 text-xs text-gray-500">{link.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <AdminPanel units={serializedUnits} users={serializedUsers} />
     </div>

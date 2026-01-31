@@ -4,7 +4,8 @@ import { getTenantId } from "@/lib/tenant";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MaintenanceFilters } from "./maintenance-filters";
-import { MaintenanceStatus } from "@prisma/client";
+import { MaintenanceStatus, ServiceType } from "@prisma/client";
+import { serviceTypeLabel } from "@/lib/utils/periodicity";
 
 const statusLabels: Record<string, string> = {
   AGENDADA: "Agendada",
@@ -22,29 +23,34 @@ interface PageProps {
   searchParams: Promise<{
     status?: MaintenanceStatus;
     equipmentId?: string;
+    serviceType?: ServiceType;
+    providerId?: string;
   }>;
 }
 
 export default async function ManutencoesPage({ searchParams }: PageProps) {
   const tenantId = await getTenantId();
   const params = await searchParams;
-  const { status, equipmentId } = params;
+  const { status, equipmentId, serviceType, providerId } = params;
 
   const now = new Date();
 
   const maintenances = await prisma.preventiveMaintenance.findMany({
     where: {
       tenantId,
-      ...(status && { status }),
+      ...(status && status !== "VENCIDA" && { status }),
       ...(equipmentId && { equipmentId }),
+      ...(serviceType && { serviceType }),
+      ...(providerId && { providerId }),
     },
     include: {
       equipment: { select: { name: true, patrimony: true } },
+      providerRef: { select: { name: true } },
     },
     orderBy: { dueDate: "asc" },
   });
 
-  // Calcula status visual (vencida se passou da data e não foi realizada)
+  // Calcula status visual (vencida se passou da data e nao foi realizada)
   const items = maintenances.map((m) => {
     let displayStatus = m.status as string;
     if (m.status === "AGENDADA" && m.dueDate < now) {
@@ -53,29 +59,35 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
     return { ...m, displayStatus };
   });
 
-  // Filtro adicional no lado do servidor para status "VENCIDA" virtual
+  // Filtro adicional para status "VENCIDA" virtual
   const filteredItems =
     status === "VENCIDA"
       ? items.filter((i) => i.displayStatus === "VENCIDA")
-      : status
-        ? items
-        : items;
+      : items;
 
-  const equipments = await prisma.equipment.findMany({
-    where: { tenantId, status: { not: "DESCARTADO" } },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const [equipments, providers] = await Promise.all([
+    prisma.equipment.findMany({
+      where: { tenantId, status: { not: "DESCARTADO" } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.provider.findMany({
+      where: { tenantId, active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Manutenções Preventivas
+            Manutencoes Preventivas
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {filteredItems.length} manutenção{filteredItems.length !== 1 && "ões"} encontrada{filteredItems.length !== 1 && "s"}
+            {filteredItems.length}{" "}
+            {filteredItems.length === 1 ? "manutencao encontrada" : "manutencoes encontradas"}
           </p>
         </div>
         <Link href="/manutencoes/nova">
@@ -83,13 +95,13 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      <MaintenanceFilters equipments={equipments} />
+      <MaintenanceFilters equipments={equipments} providers={providers} />
 
       {/* Mobile: Cards */}
       <div className="mt-4 space-y-3 lg:hidden">
         {filteredItems.length === 0 ? (
           <div className="rounded-lg border bg-white p-8 text-center text-sm text-gray-400">
-            Nenhuma manutenção encontrada.
+            Nenhuma manutencao encontrada.
           </div>
         ) : (
           filteredItems.map((m) => (
@@ -105,9 +117,12 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
                   {statusLabels[m.displayStatus] || m.displayStatus}
                 </Badge>
               </div>
-              <div className="mt-2 text-sm text-gray-600">{m.type}</div>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="muted">{serviceTypeLabel(m.serviceType)}</Badge>
+                <span className="text-sm text-gray-600">{m.type}</span>
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                {m.provider && <span>{m.provider}</span>}
+                {(m.providerRef?.name || m.provider) && <span>{m.providerRef?.name || m.provider}</span>}
                 <span>Agendada: {m.scheduledDate.toLocaleDateString("pt-BR")}</span>
                 <span>Vencimento: {m.dueDate.toLocaleDateString("pt-BR")}</span>
               </div>
@@ -122,7 +137,7 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
           <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-3">Equipamento</th>
-              <th className="px-4 py-3">Tipo</th>
+              <th className="px-4 py-3">Servico</th>
               <th className="px-4 py-3">Fornecedor</th>
               <th className="px-4 py-3">Data Agendada</th>
               <th className="px-4 py-3">Vencimento</th>
@@ -134,7 +149,7 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
             {filteredItems.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                  Nenhuma manutenção encontrada.
+                  Nenhuma manutencao encontrada.
                 </td>
               </tr>
             ) : (
@@ -150,9 +165,11 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{m.type}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant="muted">{serviceTypeLabel(m.serviceType)}</Badge>
+                  </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {m.provider || "—"}
+                    {m.providerRef?.name || m.provider || "—"}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {m.scheduledDate.toLocaleDateString("pt-BR")}

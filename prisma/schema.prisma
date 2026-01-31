@@ -7,20 +7,23 @@ datasource db {
 }
 
 // ============================================================
-// TENANT (Hospital / Clínica — o cliente SaaS)
+// TENANT (Hospital / Clinica — o cliente SaaS)
 // ============================================================
 model Tenant {
   id        String   @id @default(cuid())
-  name      String   // Nome do hospital/clínica
+  name      String   // Nome do hospital/clinica
   cnpj      String   @unique
   plan      Plan     @default(ESSENCIAL)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users      User[]
-  units      Unit[]
-  equipments Equipment[]
+  users          User[]
+  units          Unit[]
+  equipments     Equipment[]
+  providers      Provider[]
+  equipmentTypes EquipmentType[]
+  contracts      Contract[]
 
   @@map("tenants")
 }
@@ -32,7 +35,7 @@ enum Plan {
 }
 
 // ============================================================
-// USER (Usuário do sistema)
+// USER (Usuario do sistema)
 // ============================================================
 model User {
   id        String   @id @default(cuid())
@@ -47,12 +50,12 @@ model User {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Unidades que o usuário pode acessar
+  // Unidades que o usuario pode acessar
   units UserUnit[]
 
-  // Chamados abertos pelo usuário (coordenador)
+  // Chamados abertos pelo usuario (coordenador)
   openedTickets CorrectiveMaintenance[] @relation("TicketOpener")
-  // Chamados atendidos pelo usuário (técnico)
+  // Chamados atendidos pelo usuario (tecnico)
   assignedTickets CorrectiveMaintenance[] @relation("TicketAssignee")
 
   @@index([tenantId])
@@ -67,12 +70,12 @@ enum UserRole {
 }
 
 // ============================================================
-// UNIT (Setor / Unidade de produção)
+// UNIT (Setor / Unidade de producao)
 // ============================================================
 model Unit {
   id        String   @id @default(cuid())
   tenantId  String
-  name      String   // Ex: "UTI", "Centro Cirúrgico", "Radiologia"
+  name      String   // Ex: "UTI", "Centro Cirurgico", "Radiologia"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -84,7 +87,7 @@ model Unit {
   @@map("units")
 }
 
-// Tabela de junção: quais unidades cada usuário pode acessar
+// Tabela de juncao: quais unidades cada usuario pode acessar
 model UserUnit {
   userId String
   unitId String
@@ -97,31 +100,120 @@ model UserUnit {
 }
 
 // ============================================================
-// EQUIPMENT (Equipamento médico)
+// PROVIDER (Fornecedor de servicos)
+// ============================================================
+model Provider {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  cnpj          String?
+  phone         String?
+  email         String?
+  contactPerson String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contracts Contract[]
+
+  preventiveMaintenances PreventiveMaintenance[]
+  medicalPhysicsTests    MedicalPhysicsTest[]
+
+  // Default provider relationships for equipment types
+  equipmentTypesPreventiva  EquipmentType[] @relation("DefaultPreventivaProvider")
+  equipmentTypesCalibracao  EquipmentType[] @relation("DefaultCalibracaoProvider")
+  equipmentTypesTse         EquipmentType[] @relation("DefaultTseProvider")
+
+  @@index([tenantId])
+  @@map("providers")
+}
+
+// ============================================================
+// EQUIPMENT TYPE (Tipo de equipamento com periodicidades padrao)
+// ============================================================
+model EquipmentType {
+  id                     String      @id @default(cuid())
+  tenantId               String
+  name                   String
+  defaultCriticality     Criticality @default(C)
+  preventivaPeriodicity  Periodicity @default(ANUAL)
+  calibracaoPeriodicity  Periodicity @default(ANUAL)
+  tsePeriodicity         Periodicity @default(ANUAL)
+  reserveCount           Int         @default(0)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  tenant                    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  defaultPreventivaProvider Provider? @relation("DefaultPreventivaProvider", fields: [defaultPreventivaProviderId], references: [id])
+  defaultCalibracaoProvider Provider? @relation("DefaultCalibracaoProvider", fields: [defaultCalibracaoProviderId], references: [id])
+  defaultTseProvider        Provider? @relation("DefaultTseProvider", fields: [defaultTseProviderId], references: [id])
+
+  defaultPreventivaProviderId String?
+  defaultCalibracaoProviderId String?
+  defaultTseProviderId        String?
+
+  equipments Equipment[]
+
+  @@index([tenantId])
+  @@map("equipment_types")
+}
+
+enum ServiceType {
+  PREVENTIVA
+  CALIBRACAO
+  TSE
+}
+
+enum Periodicity {
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+  BIENAL
+  QUINQUENAL
+  NAO_APLICAVEL
+}
+
+enum OwnershipType {
+  PROPRIO
+  COMODATO
+}
+
+// ============================================================
+// EQUIPMENT (Equipamento medico)
 // ============================================================
 model Equipment {
-  id            String          @id @default(cuid())
-  tenantId      String
-  unitId        String
-  name          String
-  brand         String?         // Marca
-  model         String?         // Modelo
-  serialNumber  String?         // Número de série
-  patrimony     String?         // Patrimônio
-  criticality   Criticality     @default(C)
-  status        EquipmentStatus @default(ATIVO)
-  acquisitionDate DateTime?
+  id               String          @id @default(cuid())
+  tenantId         String
+  unitId           String
+  equipmentTypeId  String?
+  name             String
+  brand            String?         // Marca
+  model            String?         // Modelo
+  serialNumber     String?         // Numero de serie
+  patrimony        String?         // Patrimonio
+  criticality      Criticality     @default(C)
+  status           EquipmentStatus @default(ATIVO)
+  ownershipType    OwnershipType   @default(PROPRIO)
+  loanProvider     String?         // Fornecedor comodato (texto livre)
+  acquisitionDate  DateTime?
   acquisitionValue Float?
-  photoUrl      String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  photoUrl         String?
+  deactivationDate   DateTime?
+  deactivationReason String?
+  lastConferenceDate DateTime?
+  conferenceNotes    String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit          Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  equipmentType EquipmentType? @relation(fields: [equipmentTypeId], references: [id])
 
   preventiveMaintenances PreventiveMaintenance[]
   correctiveMaintenances CorrectiveMaintenance[]
   medicalPhysicsTests    MedicalPhysicsTest[]
+  contractEquipments     ContractEquipment[]
 
   @@index([tenantId])
   @@index([unitId])
@@ -142,29 +234,33 @@ enum EquipmentStatus {
 }
 
 // ============================================================
-// PREVENTIVE MAINTENANCE (Calibração / Preventiva)
+// PREVENTIVE MAINTENANCE (Calibracao / Preventiva / TSE)
 // ============================================================
 model PreventiveMaintenance {
-  id              String            @id @default(cuid())
-  tenantId        String
-  equipmentId     String
-  type            String            // Ex: "Calibração", "Teste de Segurança Elétrica"
-  scheduledDate   DateTime          // Data agendada
-  dueDate         DateTime          // Data de vencimento
-  executionDate   DateTime?         // Data em que foi realizada
-  status          MaintenanceStatus @default(AGENDADA)
-  provider        String?           // Fornecedor/empresa externa
-  cost            Float?            // Valor do serviço
-  certificateUrl  String?           // URL do certificado anexado
-  notes           String?
-  periodicityMonths Int             @default(12) // Periodicidade em meses
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id                String            @id @default(cuid())
+  tenantId          String
+  equipmentId       String
+  type              String            // Legado: "Calibracao", "Teste de Seguranca Eletrica", etc.
+  serviceType       ServiceType       @default(PREVENTIVA)
+  scheduledDate     DateTime          // Data agendada
+  dueDate           DateTime          // Data de vencimento
+  executionDate     DateTime?         // Data em que foi realizada
+  status            MaintenanceStatus @default(AGENDADA)
+  provider          String?           // Legado: nome do fornecedor texto livre
+  providerId        String?           // FK para Provider
+  cost              Float?            // Valor do servico
+  certificateUrl    String?           // URL do certificado anexado
+  notes             String?
+  periodicityMonths Int               @default(12) // Periodicidade em meses
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  providerRef   Provider? @relation(fields: [providerId], references: [id])
 
   @@index([tenantId])
   @@index([equipmentId])
+  @@index([dueDate])
   @@map("preventive_maintenances")
 }
 
@@ -182,13 +278,13 @@ model CorrectiveMaintenance {
   tenantId      String
   equipmentId   String
   openedById    String       // Coordenador que abriu
-  assignedToId  String?      // Técnico que atendeu
-  description   String       // Descrição do problema
+  assignedToId  String?      // Tecnico que atendeu
+  description   String       // Descricao do problema
   urgency       Urgency      @default(MEDIA)
   status        TicketStatus @default(ABERTO)
-  diagnosis     String?      // Diagnóstico do técnico
+  diagnosis     String?      // Diagnostico do tecnico
   solution      String?      // O que foi feito
-  partsUsed     String?      // Peças utilizadas
+  partsUsed     String?      // Pecas utilizadas
   timeSpent     Int?         // Tempo gasto em minutos
   cost          Float?       // Custo do reparo
   openedAt      DateTime     @default(now())
@@ -201,6 +297,8 @@ model CorrectiveMaintenance {
 
   @@index([tenantId])
   @@index([equipmentId])
+  @@index([openedById])
+  @@index([assignedToId])
   @@map("corrective_maintenances")
 }
 
@@ -219,27 +317,31 @@ enum TicketStatus {
 }
 
 // ============================================================
-// MEDICAL PHYSICS TEST (Física Médica)
+// MEDICAL PHYSICS TEST (Fisica Medica)
 // ============================================================
 model MedicalPhysicsTest {
-  id            String                @id @default(cuid())
-  tenantId      String
-  equipmentId   String
-  type          MedicalPhysicsType
-  scheduledDate DateTime
-  dueDate       DateTime
-  executionDate DateTime?
-  status        MaintenanceStatus     @default(AGENDADA)
-  provider      String?               // Empresa de física médica
-  reportUrl     String?               // URL do laudo
-  notes         String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  id                String                @id @default(cuid())
+  tenantId          String
+  equipmentId       String
+  type              MedicalPhysicsType
+  scheduledDate     DateTime
+  dueDate           DateTime
+  executionDate     DateTime?
+  status            MaintenanceStatus     @default(AGENDADA)
+  provider          String?               // Legado: empresa de fisica medica
+  providerId        String?               // FK para Provider
+  periodicityMonths Int                   @default(12)
+  reportUrl         String?               // URL do laudo
+  notes             String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  providerRef Provider? @relation(fields: [providerId], references: [id])
 
   @@index([tenantId])
   @@index([equipmentId])
+  @@index([dueDate])
   @@map("medical_physics_tests")
 }
 
@@ -248,4 +350,39 @@ enum MedicalPhysicsType {
   TESTE_CONSTANCIA
   LEVANTAMENTO_RADIOMETRICO
   TESTE_RADIACAO_FUGA
+}
+
+// ============================================================
+// CONTRACT (Contrato com fornecedor)
+// ============================================================
+model Contract {
+  id          String   @id @default(cuid())
+  tenantId    String
+  providerId  String
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  value       Float?
+  documentUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider   Provider            @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  equipments ContractEquipment[]
+
+  @@index([tenantId])
+  @@map("contracts")
+}
+
+// Juncao contrato-equipamento
+model ContractEquipment {
+  contractId  String
+  equipmentId String
+
+  contract  Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([contractId, equipmentId])
+  @@map("contract_equipments")
 }

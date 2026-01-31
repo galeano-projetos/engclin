@@ -6,18 +6,13 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquipmentFilters } from "./equipment-filters";
-import { Criticality, EquipmentStatus, UserRole } from "@prisma/client";
-
-const criticalityVariant = {
-  A: "danger",
-  B: "warning",
-  C: "success",
-} as const;
+import { Criticality, EquipmentStatus, UserRole, ServiceType } from "@prisma/client";
+import { criticalityDisplay } from "@/lib/utils/periodicity";
 
 const statusLabels: Record<EquipmentStatus, string> = {
   ATIVO: "Ativo",
   INATIVO: "Inativo",
-  EM_MANUTENCAO: "Em manutenção",
+  EM_MANUTENCAO: "Em manutencao",
   DESCARTADO: "Descartado",
 };
 
@@ -35,6 +30,19 @@ interface PageProps {
     criticality?: Criticality;
     status?: EquipmentStatus;
   }>;
+}
+
+function getServiceDotColor(
+  dueDate: Date | null,
+  now: Date
+): "bg-green-500" | "bg-yellow-500" | "bg-red-500" | "bg-gray-300" {
+  if (!dueDate) return "bg-gray-300";
+  const diff = Math.ceil(
+    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diff < 0) return "bg-red-500";
+  if (diff <= 30) return "bg-yellow-500";
+  return "bg-green-500";
 }
 
 export default async function EquipamentosPage({ searchParams }: PageProps) {
@@ -70,6 +78,45 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
     orderBy: { name: "asc" },
   });
 
+  // Get service status dots for each equipment
+  const now = new Date();
+  const serviceTypes: ServiceType[] = ["PREVENTIVA", "CALIBRACAO", "TSE"];
+  const equipmentIds = equipments.map((e) => e.id);
+
+  // Batch fetch next scheduled maintenance per equipment per service type
+  const nextMaintenances = equipmentIds.length > 0
+    ? await prisma.preventiveMaintenance.findMany({
+        where: {
+          equipmentId: { in: equipmentIds },
+          tenantId,
+          status: "AGENDADA",
+        },
+        select: { equipmentId: true, serviceType: true, dueDate: true },
+        orderBy: { dueDate: "asc" },
+      })
+    : [];
+
+  // Build map: equipmentId -> serviceType -> earliest dueDate
+  const serviceDots = new Map<string, Map<ServiceType, Date>>();
+  for (const m of nextMaintenances) {
+    if (!serviceDots.has(m.equipmentId)) {
+      serviceDots.set(m.equipmentId, new Map());
+    }
+    const typeMap = serviceDots.get(m.equipmentId)!;
+    if (!typeMap.has(m.serviceType)) {
+      typeMap.set(m.serviceType, m.dueDate);
+    }
+  }
+
+  function getDots(equipmentId: string) {
+    const typeMap = serviceDots.get(equipmentId);
+    return serviceTypes.map((st) => ({
+      type: st,
+      label: st === "PREVENTIVA" ? "P" : st === "CALIBRACAO" ? "C" : "T",
+      color: getServiceDotColor(typeMap?.get(st) || null, now),
+    }));
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -96,26 +143,41 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
             Nenhum equipamento encontrado.
           </div>
         ) : (
-          equipments.map((eq) => (
-            <Link key={eq.id} href={`/equipamentos/${eq.id}`} className="block rounded-lg border bg-white p-4 shadow-sm active:bg-gray-50">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900">{eq.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {[eq.brand, eq.model].filter(Boolean).join(" — ") || ""}
-                  </p>
+          equipments.map((eq) => {
+            const crit = criticalityDisplay[eq.criticality] || { label: eq.criticality, variant: "muted" as const };
+            const dots = getDots(eq.id);
+            return (
+              <Link key={eq.id} href={`/equipamentos/${eq.id}`} className="block rounded-lg border bg-white p-4 shadow-sm active:bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900">{eq.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {[eq.brand, eq.model].filter(Boolean).join(" — ") || ""}
+                    </p>
+                  </div>
+                  <div className="ml-2 flex flex-shrink-0 gap-1.5">
+                    <Badge variant={crit.variant}>{crit.label}</Badge>
+                    <Badge variant={statusVariant[eq.status]}>{statusLabels[eq.status]}</Badge>
+                  </div>
                 </div>
-                <div className="ml-2 flex flex-shrink-0 gap-1.5">
-                  <Badge variant={criticalityVariant[eq.criticality]}>{eq.criticality}</Badge>
-                  <Badge variant={statusVariant[eq.status]}>{statusLabels[eq.status]}</Badge>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <span>{eq.unit.name}</span>
+                  {eq.patrimony && <span>Pat: {eq.patrimony}</span>}
+                  <div className="flex items-center gap-1">
+                    {dots.map((d) => (
+                      <span
+                        key={d.type}
+                        className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white ${d.color}`}
+                        title={d.type}
+                      >
+                        {d.label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                <span>{eq.unit.name}</span>
-                {eq.patrimony && <span>Pat: {eq.patrimony}</span>}
-              </div>
-            </Link>
-          ))
+              </Link>
+            );
+          })
         )}
       </div>
 
@@ -127,8 +189,9 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
               <th className="px-4 py-3">Nome</th>
               <th className="px-4 py-3">Marca / Modelo</th>
               <th className="px-4 py-3">Setor</th>
-              <th className="px-4 py-3">Patrimônio</th>
+              <th className="px-4 py-3">Patrimonio</th>
               <th className="px-4 py-3">Criticidade</th>
+              <th className="px-4 py-3">Servicos</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -136,45 +199,62 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
           <tbody className="divide-y">
             {equipments.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   Nenhum equipamento encontrado.
                 </td>
               </tr>
             ) : (
-              equipments.map((eq) => (
-                <tr key={eq.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {eq.name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {[eq.brand, eq.model].filter(Boolean).join(" — ") || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {eq.unit.name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {eq.patrimony || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={criticalityVariant[eq.criticality]}>
-                      {eq.criticality}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={statusVariant[eq.status]}>
-                      {statusLabels[eq.status]}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/equipamentos/${eq.id}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Ver
-                    </Link>
-                  </td>
-                </tr>
-              ))
+              equipments.map((eq) => {
+                const crit = criticalityDisplay[eq.criticality] || { label: eq.criticality, variant: "muted" as const };
+                const dots = getDots(eq.id);
+                return (
+                  <tr key={eq.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {eq.name}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {[eq.brand, eq.model].filter(Boolean).join(" — ") || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {eq.unit.name}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {eq.patrimony || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={crit.variant}>
+                        {crit.label}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        {dots.map((d) => (
+                          <span
+                            key={d.type}
+                            className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white ${d.color}`}
+                            title={d.type}
+                          >
+                            {d.label}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={statusVariant[eq.status]}>
+                        {statusLabels[eq.status]}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/equipamentos/${eq.id}`}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                      >
+                        Ver
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

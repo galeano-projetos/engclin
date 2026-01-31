@@ -9,11 +9,23 @@ interface Equipment {
   name: string;
 }
 
-interface MaintenanceFiltersProps {
-  equipments: Equipment[];
+interface ProviderOption {
+  id: string;
+  name: string;
 }
 
-export function MaintenanceFilters({ equipments }: MaintenanceFiltersProps) {
+interface MaintenanceFiltersProps {
+  equipments: Equipment[];
+  providers: ProviderOption[];
+}
+
+const serviceTypeOptions = [
+  { value: "PREVENTIVA", label: "Preventiva" },
+  { value: "CALIBRACAO", label: "Calibracao" },
+  { value: "TSE", label: "TSE" },
+];
+
+export function MaintenanceFilters({ equipments, providers }: MaintenanceFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -46,12 +58,28 @@ export function MaintenanceFilters({ equipments }: MaintenanceFiltersProps) {
         onChange={(e) => handleChange("status", e.target.value)}
       />
       <Select
+        id="serviceType"
+        label="Tipo de Servico"
+        placeholder="Todos"
+        value={searchParams.get("serviceType") || ""}
+        options={serviceTypeOptions}
+        onChange={(e) => handleChange("serviceType", e.target.value)}
+      />
+      <Select
         id="equipmentId"
         label="Equipamento"
         placeholder="Todos"
         value={searchParams.get("equipmentId") || ""}
         options={equipments.map((eq) => ({ value: eq.id, label: eq.name }))}
         onChange={(e) => handleChange("equipmentId", e.target.value)}
+      />
+      <Select
+        id="providerId"
+        label="Fornecedor"
+        placeholder="Todos"
+        value={searchParams.get("providerId") || ""}
+        options={providers.map((p) => ({ value: p.id, label: p.name }))}
+        onChange={(e) => handleChange("providerId", e.target.value)}
       />
       {searchParams.toString() && (
         <Button variant="ghost" onClick={handleClear}>

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
 
 /**
- * Dados agregados para os gráficos do dashboard avançado.
+ * Dados agregados para os graficos do dashboard avancado.
  */
 
 export interface EquipmentByStatusData {
@@ -33,24 +33,33 @@ export interface CalibrationStatusData {
   count: number;
 }
 
+export interface ServiceTypeStatusData {
+  serviceType: string;
+  label: string;
+  emDia: number;
+  vencendo: number;
+  vencida: number;
+  realizada: number;
+}
+
 const statusLabels: Record<string, string> = {
   ATIVO: "Ativo",
   INATIVO: "Inativo",
-  EM_MANUTENCAO: "Em Manutenção",
+  EM_MANUTENCAO: "Em Manutencao",
   DESCARTADO: "Descartado",
 };
 
 const criticalityLabels: Record<string, string> = {
-  ALTA: "Alta",
-  MEDIA: "Média",
-  BAIXA: "Baixa",
+  A: "1 - Critico",
+  B: "2 - Moderado",
+  C: "3 - Baixo",
 };
 
 const urgencyLabels: Record<string, string> = {
   BAIXA: "Baixa",
-  MEDIA: "Média",
+  MEDIA: "Media",
   ALTA: "Alta",
-  CRITICA: "Crítica",
+  CRITICA: "Critica",
 };
 
 const monthNames = [
@@ -93,7 +102,7 @@ export async function getMaintenanceByMonth(): Promise<MaintenanceByMonthData[]>
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
-  // Preventivas realizadas nos últimos 6 meses
+  // Preventivas realizadas nos ultimos 6 meses
   const preventives = await prisma.preventiveMaintenance.findMany({
     where: {
       tenantId,
@@ -103,7 +112,7 @@ export async function getMaintenanceByMonth(): Promise<MaintenanceByMonthData[]>
     select: { executionDate: true },
   });
 
-  // Corretivas fechadas nos últimos 6 meses
+  // Corretivas fechadas nos ultimos 6 meses
   const correctives = await prisma.correctiveMaintenance.findMany({
     where: {
       tenantId,
@@ -113,11 +122,10 @@ export async function getMaintenanceByMonth(): Promise<MaintenanceByMonthData[]>
     select: { closedAt: true },
   });
 
-  // Montar mapa dos últimos 6 meses
+  // Montar mapa dos ultimos 6 meses
   const months: MaintenanceByMonthData[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
     const label = `${monthNames[d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`;
 
     const prevCount = preventives.filter((p) => {
@@ -196,4 +204,45 @@ export async function getCalibrationStatus(): Promise<CalibrationStatusData[]> {
     { status: "Vencida", count: vencida },
     { status: "Realizada", count: realized },
   ].filter((d) => d.count > 0);
+}
+
+export async function getServiceTypeStatus(): Promise<ServiceTypeStatusData[]> {
+  const tenantId = await getTenantId();
+  const now = new Date();
+
+  const types = [
+    { type: "PREVENTIVA" as const, label: "Preventiva" },
+    { type: "CALIBRACAO" as const, label: "Calibracao" },
+    { type: "TSE" as const, label: "TSE" },
+  ];
+
+  const results: ServiceTypeStatusData[] = [];
+
+  for (const { type, label } of types) {
+    const scheduled = await prisma.preventiveMaintenance.findMany({
+      where: { tenantId, status: "AGENDADA", serviceType: type },
+      select: { dueDate: true },
+    });
+
+    let emDia = 0;
+    let vencendo = 0;
+    let vencida = 0;
+
+    for (const s of scheduled) {
+      const diff = Math.ceil(
+        (s.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diff < 0) vencida++;
+      else if (diff <= 30) vencendo++;
+      else emDia++;
+    }
+
+    const realizada = await prisma.preventiveMaintenance.count({
+      where: { tenantId, status: "REALIZADA", serviceType: type },
+    });
+
+    results.push({ serviceType: type, label, emDia, vencendo, vencida, realizada });
+  }
+
+  return results;
 }

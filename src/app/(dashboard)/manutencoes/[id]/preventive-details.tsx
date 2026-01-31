@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { executePreventive, deletePreventive } from "../actions";
+import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import Link from "next/link";
 
 interface MaintenanceData {
   id: string;
   type: string;
+  serviceType: string;
   status: string;
   displayStatus: string;
   scheduledDate: string;
@@ -42,6 +44,7 @@ const periodicityLabels: Record<number, string> = {
   6: "Semestral",
   12: "Anual",
   24: "Bienal",
+  60: "Quinquenal",
 };
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -73,7 +76,7 @@ export function PreventiveDetails({
   }
 
   async function handleDelete() {
-    if (!confirm("Deseja excluir esta manutenção preventiva?")) return;
+    if (!confirm("Deseja excluir esta manutencao preventiva?")) return;
     setDeleting(true);
     await deletePreventive(maintenance.id);
   }
@@ -86,10 +89,10 @@ export function PreventiveDetails({
             href="/manutencoes"
             className="text-sm text-blue-600 hover:text-blue-800"
           >
-            &larr; Voltar para manutenções
+            &larr; Voltar para manutencoes
           </Link>
           <h1 className="mt-2 text-2xl font-bold text-gray-900">
-            {maintenance.type}
+            {serviceTypeLabel(maintenance.serviceType)}
           </h1>
           <p className="text-sm text-gray-500">
             {maintenance.equipmentName}
@@ -100,7 +103,7 @@ export function PreventiveDetails({
         <div className="flex gap-2">
           {canExecute && (
             <Button onClick={() => setShowExecuteForm(!showExecuteForm)}>
-              Registrar Execução
+              Registrar Execucao
             </Button>
           )}
           <Button variant="danger" loading={deleting} onClick={handleDelete}>
@@ -109,25 +112,28 @@ export function PreventiveDetails({
         </div>
       </div>
 
-      {/* Formulário de execução */}
+      {/* Formulario de execucao */}
       {showExecuteForm && (
         <div className="mt-6 rounded-lg border bg-blue-50 p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            Registrar Execução
+            Registrar Execucao
           </h2>
+          <p className="mb-4 text-xs text-gray-500">
+            Ao confirmar, a proxima manutencao sera gerada automaticamente.
+          </p>
           <form action={handleExecute} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 id="executionDate"
                 name="executionDate"
-                label="Data de Execução *"
+                label="Data de Execucao *"
                 type="date"
                 required
               />
               <Input
                 id="cost"
                 name="cost"
-                label="Custo do Serviço (R$)"
+                label="Custo do Servico (R$)"
                 type="number"
                 step="0.01"
                 min="0"
@@ -143,13 +149,13 @@ export function PreventiveDetails({
               <Input
                 id="notes"
                 name="notes"
-                label="Observações"
+                label="Observacoes"
                 placeholder="Notas adicionais..."
               />
             </div>
             <div className="flex gap-2">
               <Button type="submit" loading={executing}>
-                Confirmar Execução
+                Confirmar Execucao
               </Button>
               <Button
                 type="button"
@@ -169,7 +175,15 @@ export function PreventiveDetails({
           <h2 className="text-lg font-semibold text-gray-900">Detalhes</h2>
         </div>
         <dl className="divide-y px-6">
-          <InfoRow label="Tipo" value={maintenance.type} />
+          <InfoRow
+            label="Tipo de Servico"
+            value={
+              <Badge variant="muted">
+                {serviceTypeLabel(maintenance.serviceType)}
+              </Badge>
+            }
+          />
+          <InfoRow label="Descricao Legado" value={maintenance.type} />
           <InfoRow
             label="Equipamento"
             value={
@@ -208,7 +222,7 @@ export function PreventiveDetails({
           {maintenance.status === "REALIZADA" && (
             <>
               <InfoRow
-                label="Data de Execução"
+                label="Data de Execucao"
                 value={
                   maintenance.executionDate
                     ? new Date(maintenance.executionDate).toLocaleDateString("pt-BR")
@@ -240,7 +254,7 @@ export function PreventiveDetails({
                   ) : null
                 }
               />
-              <InfoRow label="Observações" value={maintenance.notes} />
+              <InfoRow label="Observacoes" value={maintenance.notes} />
             </>
           )}
         </dl>

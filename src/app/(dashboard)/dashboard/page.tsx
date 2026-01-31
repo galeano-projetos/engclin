@@ -8,6 +8,7 @@ import {
   getMaintenanceByMonth,
   getTicketsByUrgency,
   getCalibrationStatus,
+  getServiceTypeStatus,
 } from "./dashboard-data";
 import {
   EquipmentByStatusChart,
@@ -16,6 +17,7 @@ import {
   TicketsByUrgencyChart,
   CalibrationStatusChart,
 } from "./dashboard-charts";
+import { serviceTypeLabel } from "@/lib/utils/periodicity";
 
 export default async function DashboardPage() {
   const tenantId = await getTenantId();
@@ -34,23 +36,20 @@ export default async function DashboardPage() {
     chartMaintByMonth,
     chartTicketsByUrg,
     chartCalibStatus,
+    serviceTypeStats,
   ] = await Promise.all([
-    // Total de equipamentos (excluindo descartados)
     prisma.equipment.count({
       where: { tenantId, status: { not: "DESCARTADO" } },
     }),
-    // Equipamentos ativos
     prisma.equipment.count({
       where: { tenantId, status: "ATIVO" },
     }),
-    // Chamados abertos
     prisma.correctiveMaintenance.count({
       where: {
         tenantId,
         status: { in: ["ABERTO", "EM_ATENDIMENTO"] },
       },
     }),
-    // Preventivas agendadas para verificar vencidas
     prisma.preventiveMaintenance.findMany({
       where: {
         tenantId,
@@ -59,7 +58,6 @@ export default async function DashboardPage() {
       },
       select: { id: true },
     }),
-    // Próximos vencimentos (60 dias)
     prisma.preventiveMaintenance.findMany({
       where: {
         tenantId,
@@ -75,7 +73,6 @@ export default async function DashboardPage() {
       orderBy: { dueDate: "asc" },
       take: 10,
     }),
-    // Chamados recentes
     prisma.correctiveMaintenance.findMany({
       where: {
         tenantId,
@@ -88,12 +85,12 @@ export default async function DashboardPage() {
       orderBy: { openedAt: "desc" },
       take: 5,
     }),
-    // Dados dos gráficos
     getEquipmentByStatus(),
     getEquipmentByCriticality(),
     getMaintenanceByMonth(),
     getTicketsByUrgency(),
     getCalibrationStatus(),
+    getServiceTypeStatus(),
   ]);
 
   const overdueCount = allPreventives.length;
@@ -106,7 +103,7 @@ export default async function DashboardPage() {
       href: "/equipamentos",
     },
     {
-      label: "Calibrações Vencidas",
+      label: "Servicos Vencidos",
       value: overdueCount,
       color: overdueCount > 0 ? "bg-red-500" : "bg-green-500",
       href: "/manutencoes?status=VENCIDA",
@@ -134,16 +131,16 @@ export default async function DashboardPage() {
 
   const urgencyLabels: Record<string, string> = {
     BAIXA: "Baixa",
-    MEDIA: "Média",
+    MEDIA: "Media",
     ALTA: "Alta",
-    CRITICA: "Crítica",
+    CRITICA: "Critica",
   };
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Visão geral do parque tecnológico
+        Visao geral do parque tecnologico
       </p>
 
       {/* Cards */}
@@ -165,12 +162,46 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {/* Service type breakdown */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {serviceTypeStats.map((svc) => (
+          <Link
+            key={svc.serviceType}
+            href={`/manutencoes?serviceType=${svc.serviceType}`}
+          >
+            <div className="rounded-lg border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {serviceTypeLabel(svc.serviceType)}
+              </h3>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-green-600 font-medium">{svc.emDia}</span>
+                  <span className="text-gray-500"> em dia</span>
+                </div>
+                <div>
+                  <span className="text-yellow-600 font-medium">{svc.vencendo}</span>
+                  <span className="text-gray-500"> vencendo</span>
+                </div>
+                <div>
+                  <span className="text-red-600 font-medium">{svc.vencida}</span>
+                  <span className="text-gray-500"> vencido{svc.vencida !== 1 ? "s" : ""}</span>
+                </div>
+                <div>
+                  <span className="text-blue-600 font-medium">{svc.realizada}</span>
+                  <span className="text-gray-500"> realizada{svc.realizada !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {/* Próximos vencimentos */}
+        {/* Proximos vencimentos */}
         <div className="rounded-lg border bg-white shadow-sm">
           <div className="flex items-center justify-between border-b px-5 py-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Próximos Vencimentos
+              Proximos Vencimentos
             </h2>
             <Link
               href="/manutencoes"
@@ -181,7 +212,7 @@ export default async function DashboardPage() {
           </div>
           {upcomingPreventives.length === 0 ? (
             <div className="p-5 text-center text-sm text-gray-400">
-              Nenhum vencimento nos próximos 60 dias.
+              Nenhum vencimento nos proximos 60 dias.
             </div>
           ) : (
             <ul className="divide-y">
@@ -267,7 +298,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Gráficos avançados */}
+      {/* Graficos avancados */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-gray-900">
           Indicadores Visuais

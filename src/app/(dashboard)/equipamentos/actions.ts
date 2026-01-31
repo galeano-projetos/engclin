@@ -5,7 +5,7 @@ import { getTenantId } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Criticality, EquipmentStatus } from "@prisma/client";
+import { Criticality, EquipmentStatus, OwnershipType } from "@prisma/client";
 
 interface EquipmentFormData {
   name: string;
@@ -14,8 +14,11 @@ interface EquipmentFormData {
   serialNumber?: string;
   patrimony?: string;
   unitId: string;
+  equipmentTypeId?: string;
   criticality: Criticality;
   status: EquipmentStatus;
+  ownershipType: OwnershipType;
+  loanProvider?: string;
   acquisitionDate?: string;
   acquisitionValue?: string;
 }
@@ -28,8 +31,11 @@ function parseFormData(formData: FormData): EquipmentFormData {
     serialNumber: (formData.get("serialNumber") as string) || undefined,
     patrimony: (formData.get("patrimony") as string) || undefined,
     unitId: formData.get("unitId") as string,
+    equipmentTypeId: (formData.get("equipmentTypeId") as string) || undefined,
     criticality: (formData.get("criticality") as Criticality) || "C",
     status: (formData.get("status") as EquipmentStatus) || "ATIVO",
+    ownershipType: (formData.get("ownershipType") as OwnershipType) || "PROPRIO",
+    loanProvider: (formData.get("loanProvider") as string) || undefined,
     acquisitionDate: (formData.get("acquisitionDate") as string) || undefined,
     acquisitionValue: (formData.get("acquisitionValue") as string) || undefined,
   };
@@ -48,13 +54,14 @@ export async function createEquipment(formData: FormData) {
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
-    return { error: "Nome e Setor são obrigatórios." };
+    return { error: "Nome e Setor sao obrigatorios." };
   }
 
   await prisma.equipment.create({
     data: {
       tenantId,
       unitId: data.unitId,
+      equipmentTypeId: data.equipmentTypeId || undefined,
       name: data.name,
       brand: data.brand,
       model: data.model,
@@ -62,6 +69,8 @@ export async function createEquipment(formData: FormData) {
       patrimony: data.patrimony,
       criticality: data.criticality,
       status: data.status,
+      ownershipType: data.ownershipType,
+      loanProvider: data.ownershipType === "COMODATO" ? data.loanProvider : undefined,
       acquisitionDate: data.acquisitionDate
         ? new Date(data.acquisitionDate)
         : undefined,
@@ -89,13 +98,14 @@ export async function updateEquipment(id: string, formData: FormData) {
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
-    return { error: "Nome e Setor são obrigatórios." };
+    return { error: "Nome e Setor sao obrigatorios." };
   }
 
   await prisma.equipment.update({
     where: { id, tenantId },
     data: {
       unitId: data.unitId,
+      equipmentTypeId: data.equipmentTypeId || null,
       name: data.name,
       brand: data.brand,
       model: data.model,
@@ -103,6 +113,8 @@ export async function updateEquipment(id: string, formData: FormData) {
       patrimony: data.patrimony,
       criticality: data.criticality,
       status: data.status,
+      ownershipType: data.ownershipType,
+      loanProvider: data.ownershipType === "COMODATO" ? data.loanProvider : null,
       acquisitionDate: data.acquisitionDate
         ? new Date(data.acquisitionDate)
         : null,
@@ -116,13 +128,17 @@ export async function updateEquipment(id: string, formData: FormData) {
   redirect("/equipamentos");
 }
 
-export async function deleteEquipment(id: string) {
+export async function deleteEquipment(id: string, reason?: string) {
   await checkPermission("equipment.delete");
   const tenantId = await getTenantId();
 
   await prisma.equipment.update({
     where: { id, tenantId },
-    data: { status: "DESCARTADO" },
+    data: {
+      status: "DESCARTADO",
+      deactivationDate: new Date(),
+      deactivationReason: reason || undefined,
+    },
   });
 
   revalidatePath("/equipamentos");

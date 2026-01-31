@@ -15,7 +15,7 @@ export async function createPhysicsTestAction(
 }
 
 export async function createPhysicsTest(formData: FormData) {
-  await checkPermission("preventive.create");
+  await checkPermission("physics.create");
   const tenantId = await getTenantId();
 
   const equipmentId = formData.get("equipmentId") as string;
@@ -23,9 +23,10 @@ export async function createPhysicsTest(formData: FormData) {
   const scheduledDate = formData.get("scheduledDate") as string;
   const dueDate = formData.get("dueDate") as string;
   const provider = (formData.get("provider") as string) || undefined;
+  const providerId = (formData.get("providerId") as string) || undefined;
 
   if (!equipmentId || !type || !scheduledDate || !dueDate) {
-    return { error: "Equipamento, tipo, data agendada e vencimento são obrigatórios." };
+    return { error: "Equipamento, tipo, data agendada e vencimento sao obrigatorios." };
   }
 
   const equipment = await prisma.equipment.findFirst({
@@ -33,7 +34,7 @@ export async function createPhysicsTest(formData: FormData) {
   });
 
   if (!equipment) {
-    return { error: "Equipamento não encontrado." };
+    return { error: "Equipamento nao encontrado." };
   }
 
   await prisma.medicalPhysicsTest.create({
@@ -44,6 +45,7 @@ export async function createPhysicsTest(formData: FormData) {
       scheduledDate: new Date(scheduledDate),
       dueDate: new Date(dueDate),
       provider,
+      providerId: providerId || undefined,
       status: "AGENDADA",
     },
   });
@@ -53,7 +55,7 @@ export async function createPhysicsTest(formData: FormData) {
 }
 
 export async function executePhysicsTest(id: string, formData: FormData) {
-  await checkPermission("preventive.execute");
+  await checkPermission("physics.execute");
   const tenantId = await getTenantId();
 
   const executionDate = formData.get("executionDate") as string;
@@ -61,7 +63,7 @@ export async function executePhysicsTest(id: string, formData: FormData) {
   const notes = (formData.get("notes") as string) || undefined;
 
   if (!executionDate) {
-    return { error: "A data de execução é obrigatória." };
+    return { error: "A data de execucao e obrigatoria." };
   }
 
   await prisma.medicalPhysicsTest.update({
@@ -79,7 +81,7 @@ export async function executePhysicsTest(id: string, formData: FormData) {
 }
 
 export async function deletePhysicsTest(id: string) {
-  await checkPermission("preventive.delete");
+  await checkPermission("physics.delete");
   const tenantId = await getTenantId();
 
   await prisma.medicalPhysicsTest.delete({
@@ -92,8 +94,8 @@ export async function deletePhysicsTest(id: string) {
 
 /**
  * Regra especial PRD 3.6:
- * Zera a validade de todos os testes de física médica de um equipamento
- * quando uma manutenção corretiva é registrada para ele.
+ * Zera a validade de todos os testes de fisica medica de um equipamento
+ * quando uma manutencao corretiva e registrada para ele.
  */
 export async function invalidatePhysicsTests(
   tenantId: string,
@@ -108,7 +110,7 @@ export async function invalidatePhysicsTests(
     data: {
       status: "AGENDADA",
       executionDate: null,
-      notes: "Teste invalidado: manutenção corretiva registrada. Necessário reagendar.",
+      notes: "Teste invalidado: manutencao corretiva registrada. Necessario reagendar.",
     },
   });
 }
