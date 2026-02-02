@@ -16,8 +16,15 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = "diego@seprorad.com.br";
-  const name = "Diego - Seprorad";
+  // Remover usuario antigo se existir
+  const old = await prisma.user.findUnique({ where: { email: "diego@seprorad.com.br" } });
+  if (old && old.role === "PLATFORM_ADMIN") {
+    await prisma.user.delete({ where: { email: "diego@seprorad.com.br" } });
+    console.log("Usuario antigo diego@seprorad.com.br removido.");
+  }
+
+  const email = "galeano88@gmail.com";
+  const name = "Diego Galeano";
   const password = "admin123"; // Trocar em producao
 
   const existing = await prisma.user.findUnique({ where: { email } });
