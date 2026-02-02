@@ -49,3 +49,6 @@ authcookies.txt
 
 # claude
 .claude/
+
+# Windows artifacts
+nul
