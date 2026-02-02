@@ -95,26 +95,58 @@ export function ImportWizard() {
 
       {/* Step: Upload */}
       {step === "upload" && (
-        <div className="rounded-lg border bg-white p-8 text-center shadow-sm">
-          <p className="mb-4 text-gray-600">
-            Selecione uma planilha Excel (.xlsx) no formato HCAN para importar
-            equipamentos e manutencoes.
-          </p>
-          <p className="mb-6 text-xs text-gray-400">
-            Colunas esperadas: SETOR, EQUIPAMENTO, CRITICIDADE, PATRIMONIO, MARCA,
-            N/S, MODELO, AQUISICAO, DATA MANUTENCAO, PROXIMA MANUTENCAO, DATA
-            CALIBRACAO, PROXIMA CALIBRACAO, QUEM REALIZOU
-          </p>
-          <label className="inline-block cursor-pointer rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700">
-            {loading ? "Processando..." : "Selecionar Arquivo"}
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleFileUpload}
-              disabled={loading}
-            />
-          </label>
+        <div className="rounded-lg border bg-white p-8 shadow-sm">
+          <div className="text-center">
+            <p className="mb-4 text-gray-600">
+              Importe equipamentos e manutencoes a partir de uma planilha Excel (.xlsx).
+            </p>
+          </div>
+
+          {/* Download template */}
+          <div className="mb-6 rounded-md border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start gap-3">
+              <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-800">Primeiro, baixe o modelo</p>
+                <p className="mt-1 text-xs text-blue-700">
+                  Baixe a planilha modelo, preencha com os dados dos seus equipamentos
+                  e depois envie o arquivo preenchido. O modelo contém exemplos e instrucoes.
+                </p>
+                <a
+                  href="/api/import-template"
+                  download
+                  className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Baixar Modelo Excel
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload file */}
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+            <p className="mb-1 text-sm font-medium text-gray-700">Enviar planilha preenchida</p>
+            <p className="mb-3 text-xs text-gray-500">
+              Colunas esperadas: SETOR, EQUIPAMENTO, CRITICIDADE, PATRIMONIO, MARCA,
+              N/S, MODELO, AQUISICAO, DATA MANUTENCAO, PROXIMA MANUTENCAO, DATA
+              CALIBRACAO, PROXIMA CALIBRACAO, QUEM REALIZOU
+            </p>
+            <label className="inline-block cursor-pointer rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+              {loading ? "Processando..." : "Selecionar Arquivo (.xlsx)"}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleFileUpload}
+                disabled={loading}
+              />
+            </label>
+          </div>
         </div>
       )}
 
