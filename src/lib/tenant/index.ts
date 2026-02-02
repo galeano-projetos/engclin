@@ -5,12 +5,17 @@ import { UserRole } from "@prisma/client";
 /**
  * Retorna o tenantId do usuario autenticado na sessao atual.
  * Redireciona para /login se nao autenticado.
+ * Redireciona para /platform se for PLATFORM_ADMIN (sem tenant).
  */
 export async function getTenantId(): Promise<string> {
   const session = await auth();
 
   if (!session?.user) {
     redirect("/login");
+  }
+
+  if (session.user.role === "PLATFORM_ADMIN") {
+    redirect("/platform");
   }
 
   const tenantId = session.user.tenantId;
@@ -37,7 +42,7 @@ export async function getCurrentUser() {
     name: string;
     email: string;
     role: UserRole;
-    tenantId: string;
-    tenantName: string;
+    tenantId?: string;
+    tenantName?: string;
   };
 }

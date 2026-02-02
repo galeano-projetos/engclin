@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { VitalisLogo } from "@/components/ui/vitalis-logo";
 
 const roleLabels: Record<string, string> = {
+  PLATFORM_ADMIN: "Plataforma",
   MASTER: "Engenheira Clínica",
   TECNICO: "Técnico",
   COORDENADOR: "Coordenador",

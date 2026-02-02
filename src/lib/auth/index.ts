@@ -29,6 +29,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        // Block login if tenant is inactive (does not apply to PLATFORM_ADMIN)
+        if (user.role !== "PLATFORM_ADMIN" && user.tenant && !user.tenant.active) {
+          return null;
+        }
+
         const isPasswordValid = await compare(password, user.password);
 
         if (!isPasswordValid) {
@@ -40,8 +45,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          tenantId: user.tenantId,
-          tenantName: user.tenant.name,
+          tenantId: user.tenantId ?? undefined,
+          tenantName: user.tenant?.name ?? undefined,
         };
       },
     }),
@@ -51,8 +56,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = (user as { role: string }).role;
-        token.tenantId = (user as { tenantId: string }).tenantId;
-        token.tenantName = (user as { tenantName: string }).tenantName;
+        token.tenantId = (user as { tenantId?: string }).tenantId;
+        token.tenantName = (user as { tenantName?: string }).tenantName;
       }
       return token;
     },
@@ -60,8 +65,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
-        session.user.tenantId = token.tenantId as string;
-        session.user.tenantName = token.tenantName as string;
+        session.user.tenantId = token.tenantId as string | undefined;
+        session.user.tenantName = token.tenantName as string | undefined;
       }
       return session;
     },

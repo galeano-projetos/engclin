@@ -63,6 +63,11 @@ const permissions: Record<string, UserRole[]> = {
 
   // Importacao
   "import.execute": ["MASTER"],
+
+  // Plataforma (somente PLATFORM_ADMIN)
+  "platform.tenants": ["PLATFORM_ADMIN"],
+  "platform.dashboard": ["PLATFORM_ADMIN"],
+  "platform.manage": ["PLATFORM_ADMIN"],
 };
 
 export function hasPermission(role: UserRole, permission: string): boolean {
@@ -75,6 +80,11 @@ export function getAllowedPermissions(role: UserRole): string[] {
   return Object.entries(permissions)
     .filter(([, roles]) => roles.includes(role))
     .map(([perm]) => perm);
+}
+
+/** Verifica se o role e PLATFORM_ADMIN */
+export function isPlatformAdmin(role: UserRole | string): boolean {
+  return role === "PLATFORM_ADMIN";
 }
 
 /** Itens de navegacao visiveis por role */

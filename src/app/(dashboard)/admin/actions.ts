@@ -66,6 +66,10 @@ export async function createUser(formData: FormData) {
     return { error: "Perfil invalido." };
   }
 
+  if (roleResult.data === "PLATFORM_ADMIN") {
+    return { error: "Nao e permitido criar usuario PLATFORM_ADMIN pelo painel do tenant." };
+  }
+
   const emailResult = emailSchema.safeParse(email);
   if (!emailResult.success) {
     return { error: "Email invalido." };
