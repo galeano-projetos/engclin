@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 
 export default async function PorFornecedorPage() {
-  const tenantId = await getTenantId();
+  const { tenantId } = await requirePermission("preventive.view");
   const now = new Date();
 
   // Get all scheduled maintenances with provider info

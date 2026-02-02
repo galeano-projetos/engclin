@@ -29,7 +29,7 @@ export function DashboardShell({
           userName={userName}
           tenantName={tenantName}
           userRole={userRole}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          onMenuToggle={() => setSidebarOpen(prev => !prev)}
         />
         <div className="flex flex-1">
           <Sidebar

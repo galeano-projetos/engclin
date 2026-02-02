@@ -1,5 +1,5 @@
 /**
- * Sistema de Notificações — EngClin
+ * Sistema de Notificações — Vitalis
  *
  * Infraestrutura para alertas automáticos via:
  * 1. Sistema interno (painel de notificações)
@@ -31,7 +31,7 @@ export async function sendEmailNotification(
   // Exemplo com Resend:
   // const resend = new Resend(process.env.RESEND_API_KEY);
   // await resend.emails.send({
-  //   from: 'EngClin <alertas@engclin.com>',
+  //   from: 'Vitalis <alertas@vitalis.com>',
   //   to: payload.recipientEmail,
   //   subject: payload.subject,
   //   html: payload.message,

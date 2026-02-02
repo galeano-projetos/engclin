@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/require-role";
 import { hasPermission } from "@/lib/auth/permissions";
-import { UserRole, ServiceType } from "@prisma/client";
+import { ServiceType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { EquipmentDetails } from "./equipment-details";
 import { ServiceStatusSummary } from "./service-status-summary";
@@ -26,9 +25,7 @@ function computeServiceStatus(
 
 export default async function EquipamentoDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const tenantId = await getTenantId();
-  const session = await auth();
-  const role = (session?.user as { role: string })?.role as UserRole;
+  const { tenantId, role } = await requirePermission("equipment.view");
 
   const equipment = await prisma.equipment.findFirst({
     where: { id, tenantId },
@@ -125,7 +122,7 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
       <EquipmentDetails
         equipment={{
           ...equipment,
-          acquisitionValue: equipment.acquisitionValue ?? null,
+          acquisitionValue: equipment.acquisitionValue ? Number(equipment.acquisitionValue) : null,
           acquisitionDate: equipment.acquisitionDate
             ? equipment.acquisitionDate.toISOString()
             : null,

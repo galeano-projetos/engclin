@@ -53,7 +53,7 @@ export async function getInventoryReport(): Promise<ReportData> {
       acquisitionDate: e.acquisitionDate
         ? e.acquisitionDate.toLocaleDateString("pt-BR")
         : null,
-      acquisitionValue: e.acquisitionValue,
+      acquisitionValue: e.acquisitionValue ? Number(e.acquisitionValue) : null,
     })),
   };
 }
@@ -145,23 +145,24 @@ export async function getCostReport(): Promise<ReportData> {
     ],
     rows: equipments.map((e) => {
       const preventiveCost = e.preventiveMaintenances.reduce(
-        (sum, m) => sum + (m.cost || 0),
+        (sum, m) => sum + (m.cost ? Number(m.cost) : 0),
         0
       );
       const correctiveCost = e.correctiveMaintenances.reduce(
-        (sum, m) => sum + (m.cost || 0),
+        (sum, m) => sum + (m.cost ? Number(m.cost) : 0),
         0
       );
       const totalCost = preventiveCost + correctiveCost;
+      const acqVal = e.acquisitionValue ? Number(e.acquisitionValue) : null;
       const costRatio =
-        e.acquisitionValue && e.acquisitionValue > 0
-          ? ((totalCost / e.acquisitionValue) * 100).toFixed(1) + "%"
+        acqVal && acqVal > 0
+          ? ((totalCost / acqVal) * 100).toFixed(1) + "%"
           : "—";
 
       return {
         name: e.name,
         patrimony: e.patrimony,
-        acquisitionValue: e.acquisitionValue,
+        acquisitionValue: acqVal,
         preventiveCost: round2(preventiveCost),
         correctiveCost: round2(correctiveCost),
         totalCost: round2(totalCost),

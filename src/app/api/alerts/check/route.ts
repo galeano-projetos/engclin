@@ -18,10 +18,10 @@ const ALERT_DAYS = [60, 30, 20, 15, 10, 5, 0];
 
 export async function GET(request: Request) {
   // Autenticação simples via chave
-  const { searchParams } = new URL(request.url);
-  const key = searchParams.get("key");
+  const authHeader = request.headers.get("authorization");
+  const key = authHeader?.replace("Bearer ", "");
 
-  if (key !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || key !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

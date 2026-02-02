@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MaintenanceFilters } from "./maintenance-filters";
@@ -29,7 +29,7 @@ interface PageProps {
 }
 
 export default async function ManutencoesPage({ searchParams }: PageProps) {
-  const tenantId = await getTenantId();
+  const { tenantId } = await requirePermission("preventive.view");
   const params = await searchParams;
   const { status, equipmentId, serviceType, providerId } = params;
 
@@ -43,7 +43,14 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
       ...(serviceType && { serviceType }),
       ...(providerId && { providerId }),
     },
-    include: {
+    select: {
+      id: true,
+      type: true,
+      serviceType: true,
+      status: true,
+      scheduledDate: true,
+      dueDate: true,
+      provider: true,
       equipment: { select: { name: true, patrimony: true } },
       providerRef: { select: { name: true } },
     },
@@ -136,13 +143,13 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-4 py-3">Equipamento</th>
-              <th className="px-4 py-3">Servico</th>
-              <th className="px-4 py-3">Fornecedor</th>
-              <th className="px-4 py-3">Data Agendada</th>
-              <th className="px-4 py-3">Vencimento</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3"></th>
+              <th scope="col" className="px-4 py-3">Equipamento</th>
+              <th scope="col" className="px-4 py-3">Servico</th>
+              <th scope="col" className="px-4 py-3">Fornecedor</th>
+              <th scope="col" className="px-4 py-3">Data Agendada</th>
+              <th scope="col" className="px-4 py-3">Vencimento</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3"><span className="sr-only">Acoes</span></th>
             </tr>
           </thead>
           <tbody className="divide-y">

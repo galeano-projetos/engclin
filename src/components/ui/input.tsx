@@ -1,4 +1,4 @@
-import { InputHTMLAttributes } from "react";
+import { InputHTMLAttributes, useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -13,18 +13,23 @@ export function Input({
   id,
   ...props
 }: InputProps) {
+  const generatedId = useId();
+  const inputId = id || generatedId;
+
   return (
     <div className="w-full">
       {label && (
         <label
-          htmlFor={id}
+          htmlFor={inputId}
           className="mb-1 block text-sm font-medium text-gray-700"
         >
           {label}
         </label>
       )}
       <input
-        id={id}
+        id={inputId}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${inputId}-error` : undefined}
         className={cn(
           "block w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0",
           error
@@ -35,7 +40,7 @@ export function Input({
         {...props}
       />
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">{error}</p>
       )}
     </div>
   );

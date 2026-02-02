@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Rotas públicas — não exigem autenticação
-const publicPaths = ["/", "/login", "/registro", "/api/auth", "/api/alerts"];
+// Rotas publicas — nao exigem autenticacao
+const publicPaths = ["/", "/login", "/registro", "/api/auth"];
+const publicPrefixes = ["/api/auth/", "/equipamento/"];
+// Rotas publicas exatas (nao prefixos)
+const publicExact = ["/api/alerts/check"];
 
 function isPublicPath(pathname: string): boolean {
-  return (
-    publicPaths.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
-    pathname.startsWith("/equipamento/") // Página pública QR Code
-  );
+  if (publicPaths.includes(pathname)) return true;
+  if (publicExact.includes(pathname)) return true;
+  return publicPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
 export function middleware(request: NextRequest) {
@@ -18,7 +20,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Verifica se existe o token de sessão do NextAuth
+  // Verifica se existe o token de sessao do NextAuth
   const token =
     request.cookies.get("authjs.session-token")?.value ||
     request.cookies.get("__Secure-authjs.session-token")?.value;

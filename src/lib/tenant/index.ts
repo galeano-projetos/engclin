@@ -1,35 +1,43 @@
 import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 /**
- * Retorna o tenantId do usuário autenticado na sessão atual.
- * Deve ser chamado em Server Components ou Route Handlers.
- * Lança erro se o usuário não estiver autenticado.
+ * Retorna o tenantId do usuario autenticado na sessao atual.
+ * Redireciona para /login se nao autenticado.
  */
 export async function getTenantId(): Promise<string> {
   const session = await auth();
 
   if (!session?.user) {
-    throw new Error("Usuário não autenticado");
+    redirect("/login");
   }
 
-  const tenantId = (session.user as Record<string, unknown>).tenantId as string;
+  const tenantId = session.user.tenantId;
 
   if (!tenantId) {
-    throw new Error("Tenant não encontrado na sessão");
+    redirect("/login");
   }
 
   return tenantId;
 }
 
 /**
- * Retorna os dados completos do usuário autenticado.
+ * Retorna os dados completos do usuario autenticado.
  */
 export async function getCurrentUser() {
   const session = await auth();
 
   if (!session?.user) {
-    throw new Error("Usuário não autenticado");
+    redirect("/login");
   }
 
-  return session.user;
+  return session.user as {
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    tenantId: string;
+    tenantName: string;
+  };
 }

@@ -29,7 +29,7 @@ export default async function ContratosPage() {
     providerName: c.provider.name,
     startDate: c.startDate.toLocaleDateString("pt-BR"),
     endDate: c.endDate.toLocaleDateString("pt-BR"),
-    value: c.value,
+    value: c.value ? Number(c.value) : null,
     documentUrl: c.documentUrl,
     equipmentNames: c.equipments.map((e) => e.equipment.name),
     isActive: c.endDate >= now,

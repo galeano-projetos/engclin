@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: equipment
-      ? `${equipment.name} — EngClin`
+      ? `${equipment.name} — Vitalis`
       : "Equipamento não encontrado",
   };
 }
@@ -102,7 +102,7 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h1 className="text-lg font-bold text-blue-600">EngClin</h1>
+          <p className="text-lg font-bold text-blue-600">Vitalis</p>
           <p className="text-xs text-gray-400">
             Consulta pública de equipamento
           </p>
@@ -128,9 +128,9 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
 
           {/* Informações */}
           <div className="p-6">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-gray-900">
               {equipment.name}
-            </h2>
+            </h1>
 
             <dl className="mt-4 space-y-3">
               {equipment.model && (
@@ -178,7 +178,7 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-400">
-          Informações gerenciadas pelo sistema EngClin
+          Informações gerenciadas pelo sistema Vitalis
         </p>
       </div>
     </div>

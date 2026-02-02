@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/require-role";
 import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TicketFilters } from "./ticket-filters";
-import { TicketStatus, Urgency, UserRole } from "@prisma/client";
+import { TicketStatus, Urgency } from "@prisma/client";
 
 const statusLabels: Record<TicketStatus, string> = {
   ABERTO: "Aberto",
@@ -44,9 +43,7 @@ interface PageProps {
 }
 
 export default async function ChamadosPage({ searchParams }: PageProps) {
-  const tenantId = await getTenantId();
-  const session = await auth();
-  const role = (session?.user as { role: string })?.role as UserRole;
+  const { tenantId, role } = await requirePermission("ticket.view");
   const canCreate = hasPermission(role, "ticket.create");
   const params = await searchParams;
   const { status, urgency } = params;
@@ -57,7 +54,12 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
       ...(status && { status }),
       ...(urgency && { urgency }),
     },
-    include: {
+    select: {
+      id: true,
+      description: true,
+      urgency: true,
+      status: true,
+      openedAt: true,
       equipment: { select: { name: true, patrimony: true } },
       openedBy: { select: { name: true } },
       assignedTo: { select: { name: true } },
@@ -120,14 +122,14 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-4 py-3">Equipamento</th>
-              <th className="px-4 py-3">Problema</th>
-              <th className="px-4 py-3">Aberto por</th>
-              <th className="px-4 py-3">Técnico</th>
-              <th className="px-4 py-3">Urgência</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Data</th>
-              <th className="px-4 py-3"></th>
+              <th scope="col" className="px-4 py-3">Equipamento</th>
+              <th scope="col" className="px-4 py-3">Problema</th>
+              <th scope="col" className="px-4 py-3">Aberto por</th>
+              <th scope="col" className="px-4 py-3">Técnico</th>
+              <th scope="col" className="px-4 py-3">Urgência</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Data</th>
+              <th scope="col" className="px-4 py-3"><span className="sr-only">Acoes</span></th>
             </tr>
           </thead>
           <tbody className="divide-y">

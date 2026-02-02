@@ -1,11 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ServiceType } from "@prisma/client";
+import { safeFormGet, serviceTypeSchema, dateSchema, positiveDecimalSchema, positiveIntSchema, urlSchema } from "@/lib/validation";
 
 const SERVICE_TYPE_TO_LEGACY: Record<string, string> = {
   PREVENTIVA: "Manutencao Preventiva Geral",
@@ -21,11 +21,10 @@ export async function createPreventiveAction(
 }
 
 export async function createPreventive(formData: FormData) {
-  await checkPermission("preventive.create");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("preventive.create");
 
   const equipmentId = formData.get("equipmentId") as string;
-  const serviceType = (formData.get("serviceType") as ServiceType) || "PREVENTIVA";
+  const serviceType = (formData.get("serviceType") as string) || "PREVENTIVA";
   const scheduledDate = formData.get("scheduledDate") as string;
   const dueDate = formData.get("dueDate") as string;
   const periodicityMonths = formData.get("periodicityMonths") as string;
@@ -49,8 +48,8 @@ export async function createPreventive(formData: FormData) {
   // Resolve provider name for legacy field
   let providerName: string | undefined;
   if (providerId) {
-    const prov = await prisma.provider.findUnique({
-      where: { id: providerId },
+    const prov = await prisma.provider.findFirst({
+      where: { id: providerId, tenantId },
       select: { name: true },
     });
     providerName = prov?.name;
@@ -61,7 +60,7 @@ export async function createPreventive(formData: FormData) {
       tenantId,
       equipmentId,
       type: legacyType,
-      serviceType,
+      serviceType: serviceType as ServiceType,
       scheduledDate: new Date(scheduledDate),
       dueDate: new Date(dueDate),
       periodicityMonths: periodicityMonths ? parseInt(periodicityMonths) : 12,
@@ -76,8 +75,7 @@ export async function createPreventive(formData: FormData) {
 }
 
 export async function executePreventive(id: string, formData: FormData) {
-  await checkPermission("preventive.execute");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("preventive.execute");
 
   const executionDate = formData.get("executionDate") as string;
   const cost = formData.get("cost") as string;
@@ -97,48 +95,51 @@ export async function executePreventive(id: string, formData: FormData) {
     return { error: "Manutencao nao encontrada." };
   }
 
-  // Mark current as REALIZADA
-  await prisma.preventiveMaintenance.update({
-    where: { id, tenantId },
-    data: {
-      executionDate: new Date(executionDate),
-      cost: cost ? parseFloat(cost) : undefined,
-      certificateUrl,
-      notes,
-      status: "REALIZADA",
-    },
-  });
+  const operations = [
+    prisma.preventiveMaintenance.update({
+      where: { id, tenantId },
+      data: {
+        executionDate: new Date(executionDate),
+        cost: cost ? parseFloat(cost) : undefined,
+        certificateUrl,
+        notes,
+        status: "REALIZADA",
+      },
+    }),
+  ];
 
   // Auto-generate next maintenance
   if (current.periodicityMonths > 0) {
     const nextScheduledDate = new Date(executionDate);
     nextScheduledDate.setMonth(nextScheduledDate.getMonth() + current.periodicityMonths);
-
     const nextDueDate = new Date(nextScheduledDate);
 
-    await prisma.preventiveMaintenance.create({
-      data: {
-        tenantId: current.tenantId,
-        equipmentId: current.equipmentId,
-        type: current.type,
-        serviceType: current.serviceType,
-        scheduledDate: nextScheduledDate,
-        dueDate: nextDueDate,
-        periodicityMonths: current.periodicityMonths,
-        providerId: current.providerId,
-        provider: current.provider,
-        status: "AGENDADA",
-      },
-    });
+    operations.push(
+      prisma.preventiveMaintenance.create({
+        data: {
+          tenantId: current.tenantId,
+          equipmentId: current.equipmentId,
+          type: current.type,
+          serviceType: current.serviceType,
+          scheduledDate: nextScheduledDate,
+          dueDate: nextDueDate,
+          periodicityMonths: current.periodicityMonths,
+          providerId: current.providerId,
+          provider: current.provider,
+          status: "AGENDADA",
+        },
+      })
+    );
   }
+
+  await prisma.$transaction(operations);
 
   revalidatePath("/manutencoes");
   redirect("/manutencoes");
 }
 
 export async function deletePreventive(id: string) {
-  await checkPermission("preventive.delete");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("preventive.delete");
 
   await prisma.preventiveMaintenance.delete({
     where: { id, tenantId },

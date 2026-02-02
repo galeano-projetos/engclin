@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { UserRole } from "@prisma/client";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
@@ -49,18 +50,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as unknown as Record<string, unknown>).role;
-        token.tenantId = (user as unknown as Record<string, unknown>).tenantId;
-        token.tenantName = (user as unknown as Record<string, unknown>).tenantName;
+        token.role = (user as { role: string }).role;
+        token.tenantId = (user as { tenantId: string }).tenantId;
+        token.tenantName = (user as { tenantName: string }).tenantName;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as unknown as Record<string, unknown>).role = token.role;
-        (session.user as unknown as Record<string, unknown>).tenantId = token.tenantId;
-        (session.user as unknown as Record<string, unknown>).tenantName = token.tenantName;
+        session.user.role = token.role as UserRole;
+        session.user.tenantId = token.tenantId as string;
+        session.user.tenantName = token.tenantName as string;
       }
       return session;
     },
@@ -70,5 +71,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 8 * 60 * 60, // 8 hours
   },
 });

@@ -26,6 +26,7 @@ export function Header({ userName, tenantName, userRole, onMenuToggle }: HeaderP
         <button
           onClick={onMenuToggle}
           className="rounded-md p-2 text-gray-500 hover:bg-gray-100 lg:hidden"
+          aria-label="Abrir menu de navegacao"
         >
           <svg
             className="h-5 w-5"

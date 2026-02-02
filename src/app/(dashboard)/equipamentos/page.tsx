@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
-import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth/require-role";
 import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquipmentFilters } from "./equipment-filters";
-import { Criticality, EquipmentStatus, UserRole, ServiceType } from "@prisma/client";
+import { Criticality, EquipmentStatus, ServiceType } from "@prisma/client";
 import { criticalityDisplay } from "@/lib/utils/periodicity";
 
 const statusLabels: Record<EquipmentStatus, string> = {
@@ -46,37 +45,47 @@ function getServiceDotColor(
 }
 
 export default async function EquipamentosPage({ searchParams }: PageProps) {
-  const tenantId = await getTenantId();
-  const session = await auth();
-  const role = (session?.user as { role: string })?.role as UserRole;
+  const { tenantId, role } = await requirePermission("equipment.view");
   const canCreate = hasPermission(role, "equipment.create");
   const params = await searchParams;
   const { q, unitId, criticality, status } = params;
 
-  const equipments = await prisma.equipment.findMany({
-    where: {
-      tenantId,
-      ...(q && {
-        OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { brand: { contains: q, mode: "insensitive" } },
-          { model: { contains: q, mode: "insensitive" } },
-          { patrimony: { contains: q, mode: "insensitive" } },
-          { serialNumber: { contains: q, mode: "insensitive" } },
-        ],
-      }),
-      ...(unitId && { unitId }),
-      ...(criticality && { criticality }),
-      ...(status && { status }),
-    },
-    include: { unit: true },
-    orderBy: { name: "asc" },
-  });
-
-  const units = await prisma.unit.findMany({
-    where: { tenantId },
-    orderBy: { name: "asc" },
-  });
+  // Run independent queries in parallel
+  const [equipments, units] = await Promise.all([
+    prisma.equipment.findMany({
+      where: {
+        tenantId,
+        ...(q && {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { brand: { contains: q, mode: "insensitive" } },
+            { model: { contains: q, mode: "insensitive" } },
+            { patrimony: { contains: q, mode: "insensitive" } },
+            { serialNumber: { contains: q, mode: "insensitive" } },
+          ],
+        }),
+        ...(unitId && { unitId }),
+        ...(criticality && { criticality }),
+        ...(status && { status }),
+      },
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        model: true,
+        patrimony: true,
+        criticality: true,
+        status: true,
+        unit: { select: { name: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    prisma.unit.findMany({
+      where: { tenantId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   // Get service status dots for each equipment
   const now = new Date();
@@ -186,14 +195,14 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
-              <th className="px-4 py-3">Nome</th>
-              <th className="px-4 py-3">Marca / Modelo</th>
-              <th className="px-4 py-3">Setor</th>
-              <th className="px-4 py-3">Patrimonio</th>
-              <th className="px-4 py-3">Criticidade</th>
-              <th className="px-4 py-3">Servicos</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3"></th>
+              <th scope="col" className="px-4 py-3">Nome</th>
+              <th scope="col" className="px-4 py-3">Marca / Modelo</th>
+              <th scope="col" className="px-4 py-3">Setor</th>
+              <th scope="col" className="px-4 py-3">Patrimonio</th>
+              <th scope="col" className="px-4 py-3">Criticidade</th>
+              <th scope="col" className="px-4 py-3">Servicos</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3"><span className="sr-only">Acoes</span></th>
             </tr>
           </thead>
           <tbody className="divide-y">

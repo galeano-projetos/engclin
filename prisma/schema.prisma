@@ -83,6 +83,7 @@ model Unit {
   users      UserUnit[]
   equipments Equipment[]
 
+  @@unique([tenantId, name])
   @@index([tenantId])
   @@map("units")
 }
@@ -96,6 +97,7 @@ model UserUnit {
   unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@id([userId, unitId])
+  @@index([unitId])
   @@map("user_units")
 }
 
@@ -145,9 +147,9 @@ model EquipmentType {
   updatedAt              DateTime    @updatedAt
 
   tenant                    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  defaultPreventivaProvider Provider? @relation("DefaultPreventivaProvider", fields: [defaultPreventivaProviderId], references: [id])
-  defaultCalibracaoProvider Provider? @relation("DefaultCalibracaoProvider", fields: [defaultCalibracaoProviderId], references: [id])
-  defaultTseProvider        Provider? @relation("DefaultTseProvider", fields: [defaultTseProviderId], references: [id])
+  defaultPreventivaProvider Provider? @relation("DefaultPreventivaProvider", fields: [defaultPreventivaProviderId], references: [id], onDelete: SetNull)
+  defaultCalibracaoProvider Provider? @relation("DefaultCalibracaoProvider", fields: [defaultCalibracaoProviderId], references: [id], onDelete: SetNull)
+  defaultTseProvider        Provider? @relation("DefaultTseProvider", fields: [defaultTseProviderId], references: [id], onDelete: SetNull)
 
   defaultPreventivaProviderId String?
   defaultCalibracaoProviderId String?
@@ -155,7 +157,11 @@ model EquipmentType {
 
   equipments Equipment[]
 
+  @@unique([tenantId, name])
   @@index([tenantId])
+  @@index([defaultPreventivaProviderId])
+  @@index([defaultCalibracaoProviderId])
+  @@index([defaultTseProviderId])
   @@map("equipment_types")
 }
 
@@ -197,7 +203,7 @@ model Equipment {
   ownershipType    OwnershipType   @default(PROPRIO)
   loanProvider     String?         // Fornecedor comodato (texto livre)
   acquisitionDate  DateTime?
-  acquisitionValue Float?
+  acquisitionValue Decimal?        // Valor de aquisicao (precisao financeira)
   photoUrl         String?
   deactivationDate   DateTime?
   deactivationReason String?
@@ -208,7 +214,7 @@ model Equipment {
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   unit          Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  equipmentType EquipmentType? @relation(fields: [equipmentTypeId], references: [id])
+  equipmentType EquipmentType? @relation(fields: [equipmentTypeId], references: [id], onDelete: SetNull)
 
   preventiveMaintenances PreventiveMaintenance[]
   correctiveMaintenances CorrectiveMaintenance[]
@@ -217,6 +223,7 @@ model Equipment {
 
   @@index([tenantId])
   @@index([unitId])
+  @@index([equipmentTypeId])
   @@map("equipments")
 }
 
@@ -248,7 +255,7 @@ model PreventiveMaintenance {
   status            MaintenanceStatus @default(AGENDADA)
   provider          String?           // Legado: nome do fornecedor texto livre
   providerId        String?           // FK para Provider
-  cost              Float?            // Valor do servico
+  cost              Decimal?          // Valor do servico (precisao financeira)
   certificateUrl    String?           // URL do certificado anexado
   notes             String?
   periodicityMonths Int               @default(12) // Periodicidade em meses
@@ -256,11 +263,12 @@ model PreventiveMaintenance {
   updatedAt         DateTime          @updatedAt
 
   equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  providerRef   Provider? @relation(fields: [providerId], references: [id])
+  providerRef   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([equipmentId])
   @@index([dueDate])
+  @@index([providerId])
   @@map("preventive_maintenances")
 }
 
@@ -286,7 +294,7 @@ model CorrectiveMaintenance {
   solution      String?      // O que foi feito
   partsUsed     String?      // Pecas utilizadas
   timeSpent     Int?         // Tempo gasto em minutos
-  cost          Float?       // Custo do reparo
+  cost          Decimal?     // Custo do reparo (precisao financeira)
   openedAt      DateTime     @default(now())
   closedAt      DateTime?
   updatedAt     DateTime     @updatedAt
@@ -337,11 +345,12 @@ model MedicalPhysicsTest {
   updatedAt         DateTime              @updatedAt
 
   equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  providerRef Provider? @relation(fields: [providerId], references: [id])
+  providerRef Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([equipmentId])
   @@index([dueDate])
+  @@index([providerId])
   @@map("medical_physics_tests")
 }
 
@@ -362,7 +371,7 @@ model Contract {
   name        String
   startDate   DateTime
   endDate     DateTime
-  value       Float?
+  value       Decimal? // Valor do contrato (precisao financeira)
   documentUrl String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -372,6 +381,7 @@ model Contract {
   equipments ContractEquipment[]
 
   @@index([tenantId])
+  @@index([providerId])
   @@map("contracts")
 }
 
@@ -384,5 +394,6 @@ model ContractEquipment {
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
   @@id([contractId, equipmentId])
+  @@index([equipmentId])
   @@map("contract_equipments")
 }

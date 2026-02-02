@@ -35,6 +35,32 @@ export async function createContract(formData: FormData) {
     return { error: "Fornecedor, nome, data inicio e data fim sao obrigatorios." };
   }
 
+  // Validate provider belongs to tenant
+  const provider = await prisma.provider.findFirst({
+    where: { id: providerId, tenantId },
+  });
+  if (!provider) {
+    return { error: "Fornecedor nao encontrado." };
+  }
+
+  // Validate all equipment belong to tenant
+  if (equipmentIds.length > 0) {
+    const validEquipCount = await prisma.equipment.count({
+      where: { id: { in: equipmentIds.filter(Boolean) }, tenantId },
+    });
+    if (validEquipCount !== equipmentIds.filter(Boolean).length) {
+      return { error: "Um ou mais equipamentos nao foram encontrados." };
+    }
+  }
+
+  if (documentUrl && !documentUrl.startsWith("http://") && !documentUrl.startsWith("https://")) {
+    return { error: "URL do documento deve iniciar com http:// ou https://" };
+  }
+
+  if (new Date(startDate) >= new Date(endDate)) {
+    return { error: "Data de inicio deve ser anterior a data de fim." };
+  }
+
   await prisma.contract.create({
     data: {
       tenantId,

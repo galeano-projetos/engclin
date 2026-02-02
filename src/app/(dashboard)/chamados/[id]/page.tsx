@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
 import { notFound } from "next/navigation";
 import { TicketDetails } from "./ticket-details";
 
@@ -9,7 +9,7 @@ interface PageProps {
 
 export default async function ChamadoDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const tenantId = await getTenantId();
+  const { tenantId } = await requirePermission("ticket.view");
 
   const ticket = await prisma.correctiveMaintenance.findFirst({
     where: { id, tenantId },
@@ -35,7 +35,7 @@ export default async function ChamadoDetailPage({ params }: PageProps) {
         solution: ticket.solution,
         partsUsed: ticket.partsUsed,
         timeSpent: ticket.timeSpent,
-        cost: ticket.cost,
+        cost: ticket.cost ? Number(ticket.cost) : null,
         openedAt: ticket.openedAt.toISOString(),
         closedAt: ticket.closedAt?.toISOString() || null,
         equipmentName: ticket.equipment.name,

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
 import { notFound } from "next/navigation";
 import { PreventiveDetails } from "./preventive-details";
 
@@ -9,7 +9,7 @@ interface PageProps {
 
 export default async function PreventiveDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const tenantId = await getTenantId();
+  const { tenantId } = await requirePermission("preventive.view");
 
   const maintenance = await prisma.preventiveMaintenance.findFirst({
     where: { id, tenantId },
@@ -42,7 +42,7 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
         executionDate: maintenance.executionDate?.toISOString() || null,
         periodicityMonths: maintenance.periodicityMonths,
         provider: maintenance.providerRef?.name || maintenance.provider,
-        cost: maintenance.cost,
+        cost: maintenance.cost ? Number(maintenance.cost) : null,
         certificateUrl: maintenance.certificateUrl,
         notes: maintenance.notes,
         equipmentName: maintenance.equipment.name,

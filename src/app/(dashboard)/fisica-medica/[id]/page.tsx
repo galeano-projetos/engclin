@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
 import { notFound } from "next/navigation";
 import { PhysicsTestDetails } from "./physics-test-details";
 
@@ -9,7 +9,7 @@ interface PageProps {
 
 export default async function PhysicsTestDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const tenantId = await getTenantId();
+  const { tenantId } = await requirePermission("physics.view");
 
   const test = await prisma.medicalPhysicsTest.findFirst({
     where: { id, tenantId },

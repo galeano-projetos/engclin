@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     totalEquipments,
     activeEquipments,
     openTickets,
-    allPreventives,
+    overdueCount,
     upcomingPreventives,
     recentTickets,
     chartEquipByStatus,
@@ -50,13 +50,12 @@ export default async function DashboardPage() {
         status: { in: ["ABERTO", "EM_ATENDIMENTO"] },
       },
     }),
-    prisma.preventiveMaintenance.findMany({
+    prisma.preventiveMaintenance.count({
       where: {
         tenantId,
         status: "AGENDADA",
         dueDate: { lt: now },
       },
-      select: { id: true },
     }),
     prisma.preventiveMaintenance.findMany({
       where: {
@@ -93,7 +92,7 @@ export default async function DashboardPage() {
     getServiceTypeStatus(),
   ]);
 
-  const overdueCount = allPreventives.length;
+  // overdueCount is already a number from count()
 
   const stats = [
     {
@@ -127,14 +126,14 @@ export default async function DashboardPage() {
     MEDIA: "info",
     ALTA: "warning",
     CRITICA: "danger",
-  };
+  } as const;
 
   const urgencyLabels: Record<string, string> = {
     BAIXA: "Baixa",
     MEDIA: "Media",
     ALTA: "Alta",
     CRITICA: "Critica",
-  };
+  } as const;
 
   return (
     <div>

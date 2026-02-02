@@ -24,21 +24,25 @@ export function LoginForm() {
 
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error) {
+        setError("Email ou senha inválidos.");
+        return;
+      }
 
-    if (result?.error) {
-      setError("Email ou senha inválidos.");
-      return;
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Erro ao conectar. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
@@ -63,7 +67,7 @@ export function LoginForm() {
       />
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div role="alert" aria-live="assertive" className="rounded-md bg-red-50 p-3 text-sm text-red-700">
           {error}
         </div>
       )}

@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -49,12 +48,29 @@ export async function createEquipmentAction(
 }
 
 export async function createEquipment(formData: FormData) {
-  await checkPermission("equipment.create");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("equipment.create");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
     return { error: "Nome e Setor sao obrigatorios." };
+  }
+
+  // Validate unit belongs to tenant
+  const unit = await prisma.unit.findFirst({
+    where: { id: data.unitId, tenantId },
+  });
+  if (!unit) {
+    return { error: "Setor nao encontrado." };
+  }
+
+  // Validate equipment type belongs to tenant (if provided)
+  if (data.equipmentTypeId) {
+    const eqType = await prisma.equipmentType.findFirst({
+      where: { id: data.equipmentTypeId, tenantId },
+    });
+    if (!eqType) {
+      return { error: "Tipo de equipamento nao encontrado." };
+    }
   }
 
   await prisma.equipment.create({
@@ -93,12 +109,29 @@ export async function updateEquipmentAction(
 }
 
 export async function updateEquipment(id: string, formData: FormData) {
-  await checkPermission("equipment.edit");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("equipment.edit");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
     return { error: "Nome e Setor sao obrigatorios." };
+  }
+
+  // Validate unit belongs to tenant
+  const unit = await prisma.unit.findFirst({
+    where: { id: data.unitId, tenantId },
+  });
+  if (!unit) {
+    return { error: "Setor nao encontrado." };
+  }
+
+  // Validate equipment type belongs to tenant (if provided)
+  if (data.equipmentTypeId) {
+    const eqType = await prisma.equipmentType.findFirst({
+      where: { id: data.equipmentTypeId, tenantId },
+    });
+    if (!eqType) {
+      return { error: "Tipo de equipamento nao encontrado." };
+    }
   }
 
   await prisma.equipment.update({
@@ -129,8 +162,7 @@ export async function updateEquipment(id: string, formData: FormData) {
 }
 
 export async function deleteEquipment(id: string, reason?: string) {
-  await checkPermission("equipment.delete");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("equipment.delete");
 
   await prisma.equipment.update({
     where: { id, tenantId },

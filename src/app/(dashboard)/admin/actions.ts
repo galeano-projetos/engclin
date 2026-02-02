@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
+import { userRoleSchema, emailSchema, passwordSchema } from "@/lib/validation";
 
 // ============================================================
 // Gestao de Unidades
@@ -60,6 +61,21 @@ export async function createUser(formData: FormData) {
     return { error: "Todos os campos sao obrigatorios" };
   }
 
+  const roleResult = userRoleSchema.safeParse(role);
+  if (!roleResult.success) {
+    return { error: "Perfil invalido." };
+  }
+
+  const emailResult = emailSchema.safeParse(email);
+  if (!emailResult.success) {
+    return { error: "Email invalido." };
+  }
+
+  const passwordResult = passwordSchema.safeParse(password);
+  if (!passwordResult.success) {
+    return { error: passwordResult.error.issues[0].message };
+  }
+
   // Verificar se email ja existe
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -74,7 +90,7 @@ export async function createUser(formData: FormData) {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password: hashedPassword,
-      role: role as "MASTER" | "TECNICO" | "COORDENADOR" | "FISCAL",
+      role: roleResult.data,
     },
   });
 
@@ -91,6 +107,15 @@ export async function toggleUserActive(userId: string) {
 
   if (!user) {
     return { error: "Usuario nao encontrado" };
+  }
+
+  if (user.active && user.role === "MASTER") {
+    const masterCount = await prisma.user.count({
+      where: { tenantId, role: "MASTER", active: true },
+    });
+    if (masterCount <= 1) {
+      return { error: "Nao e possivel desativar o ultimo usuario MASTER." };
+    }
   }
 
   await prisma.user.update({

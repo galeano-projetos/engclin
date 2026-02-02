@@ -1,12 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getTenantId, getCurrentUser } from "@/lib/tenant";
+import { getCurrentUser } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
 import { invalidatePhysicsTests } from "@/app/(dashboard)/fisica-medica/actions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Urgency } from "@prisma/client";
+import { safeFormGet, urgencySchema } from "@/lib/validation";
 
 export async function createTicketAction(
   _prevState: { error?: string } | undefined,
@@ -16,16 +16,20 @@ export async function createTicketAction(
 }
 
 export async function createTicket(formData: FormData) {
-  await checkPermission("ticket.create");
-  const tenantId = await getTenantId();
+  const { tenantId, userId } = await checkPermission("ticket.create");
   const user = await getCurrentUser();
 
-  const equipmentId = formData.get("equipmentId") as string;
-  const description = formData.get("description") as string;
-  const urgency = (formData.get("urgency") as Urgency) || "MEDIA";
+  const equipmentId = safeFormGet(formData, "equipmentId");
+  const description = safeFormGet(formData, "description");
+  const rawUrgency = safeFormGet(formData, "urgency");
+  const urgency = urgencySchema.safeParse(rawUrgency || "MEDIA");
 
   if (!equipmentId || !description) {
-    return { error: "Equipamento e descrição são obrigatórios." };
+    return { error: "Equipamento e descricao sao obrigatorios." };
+  }
+
+  if (!urgency.success) {
+    return { error: urgency.error.issues[0].message };
   }
 
   const equipment = await prisma.equipment.findFirst({
@@ -33,32 +37,32 @@ export async function createTicket(formData: FormData) {
   });
 
   if (!equipment) {
-    return { error: "Equipamento não encontrado." };
+    return { error: "Equipamento nao encontrado." };
   }
 
-  await prisma.correctiveMaintenance.create({
-    data: {
-      tenantId,
-      equipmentId,
-      openedById: user.id,
-      description,
-      urgency,
-      status: "ABERTO",
-    },
-  });
-
-  await prisma.equipment.update({
-    where: { id: equipmentId },
-    data: { status: "EM_MANUTENCAO" },
-  });
+  await prisma.$transaction([
+    prisma.correctiveMaintenance.create({
+      data: {
+        tenantId,
+        equipmentId,
+        openedById: user.id,
+        description,
+        urgency: urgency.data,
+        status: "ABERTO",
+      },
+    }),
+    prisma.equipment.update({
+      where: { id: equipmentId, tenantId },
+      data: { status: "EM_MANUTENCAO" },
+    }),
+  ]);
 
   revalidatePath("/chamados");
   redirect("/chamados");
 }
 
 export async function acceptTicket(id: string) {
-  await checkPermission("ticket.accept");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("ticket.accept");
   const user = await getCurrentUser();
 
   await prisma.correctiveMaintenance.update({
@@ -73,17 +77,26 @@ export async function acceptTicket(id: string) {
 }
 
 export async function resolveTicket(id: string, formData: FormData) {
-  await checkPermission("ticket.resolve");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("ticket.resolve");
 
-  const diagnosis = (formData.get("diagnosis") as string) || undefined;
-  const solution = formData.get("solution") as string;
-  const partsUsed = (formData.get("partsUsed") as string) || undefined;
-  const timeSpent = formData.get("timeSpent") as string;
-  const cost = formData.get("cost") as string;
+  const diagnosis = safeFormGet(formData, "diagnosis") || undefined;
+  const solution = safeFormGet(formData, "solution");
+  const partsUsed = safeFormGet(formData, "partsUsed") || undefined;
+  const rawTimeSpent = safeFormGet(formData, "timeSpent");
+  const rawCost = safeFormGet(formData, "cost");
 
   if (!solution) {
-    return { error: "A descrição da solução é obrigatória." };
+    return { error: "A descricao da solucao e obrigatoria." };
+  }
+
+  const timeSpent = rawTimeSpent ? parseInt(rawTimeSpent) : undefined;
+  const cost = rawCost ? parseFloat(rawCost) : undefined;
+
+  if (rawTimeSpent && isNaN(timeSpent!)) {
+    return { error: "Tempo gasto invalido." };
+  }
+  if (rawCost && isNaN(cost!)) {
+    return { error: "Custo invalido." };
   }
 
   const ticket = await prisma.correctiveMaintenance.update({
@@ -92,19 +105,30 @@ export async function resolveTicket(id: string, formData: FormData) {
       diagnosis,
       solution,
       partsUsed,
-      timeSpent: timeSpent ? parseInt(timeSpent) : undefined,
-      cost: cost ? parseFloat(cost) : undefined,
+      timeSpent,
+      cost,
       status: "RESOLVIDO",
       closedAt: new Date(),
     },
   });
 
-  await prisma.equipment.update({
-    where: { id: ticket.equipmentId },
-    data: { status: "ATIVO" },
+  // Only set equipment to ATIVO if no other open tickets exist
+  const otherOpenTickets = await prisma.correctiveMaintenance.count({
+    where: {
+      equipmentId: ticket.equipmentId,
+      tenantId,
+      status: { in: ["ABERTO", "EM_ATENDIMENTO"] },
+      id: { not: id },
+    },
   });
 
-  // Regra especial PRD 3.6: zerar testes de física médica
+  if (otherOpenTickets === 0) {
+    await prisma.equipment.update({
+      where: { id: ticket.equipmentId, tenantId },
+      data: { status: "ATIVO" },
+    });
+  }
+
   await invalidatePhysicsTests(tenantId, ticket.equipmentId);
 
   revalidatePath("/chamados");
@@ -113,8 +137,7 @@ export async function resolveTicket(id: string, formData: FormData) {
 }
 
 export async function closeTicket(id: string) {
-  await checkPermission("ticket.close");
-  const tenantId = await getTenantId();
+  const { tenantId } = await checkPermission("ticket.close");
 
   await prisma.correctiveMaintenance.update({
     where: { id, tenantId },

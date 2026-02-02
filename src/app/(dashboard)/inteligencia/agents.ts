@@ -74,15 +74,15 @@ export async function runCostBenefitAgent(): Promise<CostBenefitInsight[]> {
   const insights: CostBenefitInsight[] = [];
 
   for (const eq of equipments) {
-    const acquisitionValue = eq.acquisitionValue || 0;
+    const acquisitionValue = Number(eq.acquisitionValue) || 0;
     if (acquisitionValue <= 0) continue;
 
     const preventiveCost = eq.preventiveMaintenances.reduce(
-      (sum, m) => sum + (m.cost || 0),
+      (sum, m) => sum + (m.cost ? Number(m.cost) : 0),
       0
     );
     const correctiveCost = eq.correctiveMaintenances.reduce(
-      (sum, m) => sum + (m.cost || 0),
+      (sum, m) => sum + (m.cost ? Number(m.cost) : 0),
       0
     );
     const totalCost = preventiveCost + correctiveCost;
@@ -113,7 +113,7 @@ export async function runCostBenefitAgent(): Promise<CostBenefitInsight[]> {
       equipmentName: eq.name,
       patrimony: eq.patrimony,
       unitName: eq.unit.name,
-      acquisitionValue,
+      acquisitionValue: acquisitionValue as number,
       totalMaintenanceCost: totalCost,
       costRatio,
       ageYears: Math.round(ageYears * 10) / 10,

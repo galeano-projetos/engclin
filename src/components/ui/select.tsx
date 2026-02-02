@@ -1,4 +1,4 @@
-import { SelectHTMLAttributes } from "react";
+import { SelectHTMLAttributes, useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -17,18 +17,23 @@ export function Select({
   id,
   ...props
 }: SelectProps) {
+  const generatedId = useId();
+  const selectId = id || generatedId;
+
   return (
     <div className="w-full">
       {label && (
         <label
-          htmlFor={id}
+          htmlFor={selectId}
           className="mb-1 block text-sm font-medium text-gray-700"
         >
           {label}
         </label>
       )}
       <select
-        id={id}
+        id={selectId}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${selectId}-error` : undefined}
         className={cn(
           "block w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0",
           error
@@ -47,7 +52,7 @@ export function Select({
           </option>
         ))}
       </select>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p id={`${selectId}-error`} className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
