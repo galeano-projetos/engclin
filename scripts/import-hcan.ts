@@ -4,7 +4,7 @@ import { PrismaClient, Criticality, ServiceType, Periodicity } from "@prisma/cli
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as fs from "fs";
 import * as path from "path";
-import { hash } from "bcryptjs";
+// import { hash } from "bcryptjs"; // Not needed - we use existing tenant/user
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -123,30 +123,35 @@ async function main() {
 
   console.log("Sheets:", wb.SheetNames);
 
-  // ---- Tenant + Admin user ----
-  const senhaHash = await hash("123456", 10);
-  const tenant = await prisma.tenant.upsert({
-    where: { cnpj: "00000000000100" },
-    update: {},
-    create: {
-      name: "Hospital HCAN",
-      cnpj: "00000000000100",
-      plan: "PROFISSIONAL",
+  // ---- Find existing Tenant by CNPJ or ID ----
+  // Usage: npx tsx scripts/import-hcan.ts [CNPJ_OR_TENANT_ID]
+  const targetArg = process.argv[2] || "24.672.792/0001-09"; // Default: HCAN real CNPJ
+  let tenant = await prisma.tenant.findFirst({
+    where: {
+      OR: [
+        { cnpj: targetArg },
+        { id: targetArg },
+      ],
     },
   });
-  console.log("Tenant:", tenant.name);
+  if (!tenant) {
+    console.error(`Tenant nao encontrado com CNPJ/ID: ${targetArg}`);
+    console.log("Tenants disponiveis:");
+    const all = await prisma.tenant.findMany({ select: { id: true, name: true, cnpj: true } });
+    all.forEach(t => console.log(`  ${t.id} | ${t.name} | ${t.cnpj}`));
+    process.exit(1);
+  }
+  console.log("Tenant:", tenant.name, `(${tenant.id})`);
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@engclin.com" },
-    update: {},
-    create: {
-      tenantId: tenant.id,
-      name: "Administrador",
-      email: "admin@engclin.com",
-      password: senhaHash,
-      role: "MASTER",
-    },
+  // Find the first MASTER user in this tenant to associate units
+  const admin = await prisma.user.findFirst({
+    where: { tenantId: tenant.id, role: "MASTER" },
   });
+  if (!admin) {
+    console.error("Nenhum usuario MASTER encontrado no tenant.");
+    process.exit(1);
+  }
+  console.log("Admin:", admin.name, admin.email);
 
   // Clean existing data (order matters for FK constraints)
   await prisma.contractEquipment.deleteMany({ where: { contract: { tenantId: tenant.id } } });
