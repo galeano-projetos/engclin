@@ -39,12 +39,12 @@ export function EquipmentFilters({ units }: EquipmentFiltersProps) {
   );
 
   function handleSearch() {
-    const qs = createQueryString({ q });
+    const qs = createQueryString({ q, page: "1" });
     router.push(`/equipamentos?${qs}`);
   }
 
   function handleFilterChange(key: string, value: string) {
-    const qs = createQueryString({ [key]: value });
+    const qs = createQueryString({ [key]: value, page: "1" });
     router.push(`/equipamentos?${qs}`);
   }
 

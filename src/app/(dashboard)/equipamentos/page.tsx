@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquipmentFilters } from "./equipment-filters";
+import { EquipmentPagination } from "./equipment-pagination";
 import { Criticality, EquipmentStatus, ServiceType } from "@prisma/client";
 import { criticalityDisplay } from "@/lib/utils/periodicity";
 
@@ -22,12 +23,16 @@ const statusVariant: Record<EquipmentStatus, "success" | "muted" | "info" | "dan
   DESCARTADO: "danger",
 };
 
+const VALID_PER_PAGE = [20, 50, 100, 150, 200, 0]; // 0 = todos
+
 interface PageProps {
   searchParams: Promise<{
     q?: string;
     unitId?: string;
     criticality?: Criticality;
     status?: EquipmentStatus;
+    page?: string;
+    perPage?: string;
   }>;
 }
 
@@ -50,24 +55,31 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const { q, unitId, criticality, status } = params;
 
-  // Run independent queries in parallel
-  const [equipments, units] = await Promise.all([
+  const page = Math.max(1, parseInt(params.page || "1") || 1);
+  const rawPerPage = parseInt(params.perPage || "20") || 20;
+  const perPage = VALID_PER_PAGE.includes(rawPerPage) ? rawPerPage : 20;
+  const showAll = perPage === 0;
+
+  const whereClause = {
+    tenantId,
+    ...(q && {
+      OR: [
+        { name: { contains: q, mode: "insensitive" as const } },
+        { brand: { contains: q, mode: "insensitive" as const } },
+        { model: { contains: q, mode: "insensitive" as const } },
+        { patrimony: { contains: q, mode: "insensitive" as const } },
+        { serialNumber: { contains: q, mode: "insensitive" as const } },
+      ],
+    }),
+    ...(unitId && { unitId }),
+    ...(criticality && { criticality }),
+    ...(status && { status }),
+  };
+
+  // Run queries in parallel
+  const [equipments, totalCount, units] = await Promise.all([
     prisma.equipment.findMany({
-      where: {
-        tenantId,
-        ...(q && {
-          OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { brand: { contains: q, mode: "insensitive" } },
-            { model: { contains: q, mode: "insensitive" } },
-            { patrimony: { contains: q, mode: "insensitive" } },
-            { serialNumber: { contains: q, mode: "insensitive" } },
-          ],
-        }),
-        ...(unitId && { unitId }),
-        ...(criticality && { criticality }),
-        ...(status && { status }),
-      },
+      where: whereClause,
       select: {
         id: true,
         name: true,
@@ -79,13 +91,17 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
         unit: { select: { name: true } },
       },
       orderBy: { name: "asc" },
+      ...(showAll ? {} : { skip: (page - 1) * perPage, take: perPage }),
     }),
+    prisma.equipment.count({ where: whereClause }),
     prisma.unit.findMany({
       where: { tenantId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const totalPages = showAll ? 1 : Math.ceil(totalCount / perPage);
 
   // Get service status dots for each equipment
   const now = new Date();
@@ -132,7 +148,10 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Equipamentos</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {equipments.length} equipamento{equipments.length !== 1 && "s"} encontrado{equipments.length !== 1 && "s"}
+            {totalCount} equipamento{totalCount !== 1 && "s"} encontrado{totalCount !== 1 && "s"}
+            {!showAll && totalCount > perPage && (
+              <span> — mostrando {(page - 1) * perPage + 1} a {Math.min(page * perPage, totalCount)}</span>
+            )}
           </p>
         </div>
         {canCreate && (
@@ -268,6 +287,14 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Paginacao */}
+      <EquipmentPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        perPage={perPage}
+      />
     </div>
   );
 }
