@@ -66,7 +66,8 @@ function defaultPeriodicity(type: MedicalPhysicsType): number {
   return 12;
 }
 
-const SEPRORAD_PORTAL_URL = "https://portal.seprorad.com.br";
+// Documents are served via proxy route in the engclin app
+// GET /api/seprorad-doc/{docId} fetches the PDF from Seprorad DB
 
 export async function syncSeproradDocuments(
   tenantId: string,
@@ -165,7 +166,7 @@ export async function syncSeproradDocuments(
         continue;
       }
 
-      const reportUrl = `${SEPRORAD_PORTAL_URL}/api/documentos/download/${doc.id}`;
+      const reportUrl = `/api/seprorad-doc/${doc.id}`;
       const executionDate = doc.data_emissao || new Date();
       const dueDate = doc.data_validade || new Date();
       const syncNote = `seprorad:${doc.id}`;
