@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MedicalPhysicsType } from "@prisma/client";
+import { PhysicsFilters } from "./physics-filters";
+import { PhysicsPagination } from "./physics-pagination";
+import { MaintenanceStatus, MedicalPhysicsType } from "@prisma/client";
 
 const typeLabels: Record<MedicalPhysicsType, string> = {
   CONTROLE_QUALIDADE: "Controle de Qualidade",
@@ -24,23 +26,69 @@ const statusVariant: Record<string, "info" | "success" | "danger"> = {
   VENCIDA: "danger",
 };
 
-export default async function FisicaMedicaPage() {
+const VALID_PER_PAGE = [20, 50, 100, 150, 200, 0];
+
+interface PageProps {
+  searchParams: Promise<{
+    status?: MaintenanceStatus | "VENCIDA";
+    type?: MedicalPhysicsType;
+    equipmentId?: string;
+    page?: string;
+    perPage?: string;
+  }>;
+}
+
+export default async function FisicaMedicaPage({ searchParams }: PageProps) {
   const { tenantId } = await requirePermission("physics.view");
+  const params = await searchParams;
+  const { status, type, equipmentId } = params;
+
+  const page = Math.max(1, parseInt(params.page || "1") || 1);
+  const rawPerPage = parseInt(params.perPage || "20") || 20;
+  const perPage = VALID_PER_PAGE.includes(rawPerPage) ? rawPerPage : 20;
+  const showAll = perPage === 0;
+
   const now = new Date();
 
-  const tests = await prisma.medicalPhysicsTest.findMany({
-    where: { tenantId },
-    select: {
-      id: true,
-      type: true,
-      status: true,
-      provider: true,
-      scheduledDate: true,
-      dueDate: true,
-      equipment: { select: { name: true, patrimony: true } },
-    },
-    orderBy: { dueDate: "asc" },
-  });
+  const whereClause = {
+    tenantId,
+    ...(status === "VENCIDA"
+      ? { status: "AGENDADA" as MaintenanceStatus, dueDate: { lt: now } }
+      : status
+        ? { status }
+        : {}),
+    ...(type && { type }),
+    ...(equipmentId && { equipmentId }),
+  };
+
+  const [tests, totalCount, equipments] = await Promise.all([
+    prisma.medicalPhysicsTest.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        provider: true,
+        providerRef: { select: { name: true } },
+        scheduledDate: true,
+        dueDate: true,
+        equipment: { select: { name: true, patrimony: true } },
+      },
+      orderBy: { dueDate: "asc" },
+      ...(showAll ? {} : { skip: (page - 1) * perPage, take: perPage }),
+    }),
+    prisma.medicalPhysicsTest.count({ where: whereClause }),
+    prisma.equipment.findMany({
+      where: {
+        tenantId,
+        medicalPhysicsTests: { some: {} },
+      },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  const totalPages = showAll ? 1 : Math.ceil(totalCount / perPage);
 
   const items = tests.map((t) => {
     let displayStatus = t.status as string;
@@ -56,8 +104,12 @@ export default async function FisicaMedicaPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Física Médica</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Controle de testes e laudos exigidos pela legislação (RDC 611 / IN
-            90-96).
+            {totalCount}{" "}
+            {totalCount === 1 ? "teste encontrado" : "testes encontrados"}
+            {!showAll && totalCount > perPage && (
+              <span> — mostrando {(page - 1) * perPage + 1} a {Math.min(page * perPage, totalCount)}</span>
+            )}
+            {" "}(RDC 611 / IN 90-96)
           </p>
         </div>
         <Link href="/fisica-medica/novo">
@@ -65,11 +117,13 @@ export default async function FisicaMedicaPage() {
         </Link>
       </div>
 
+      <PhysicsFilters equipments={equipments} />
+
       {/* Mobile: Cards */}
-      <div className="mt-6 space-y-3 lg:hidden">
+      <div className="mt-4 space-y-3 lg:hidden">
         {items.length === 0 ? (
           <div className="rounded-lg border bg-white p-8 text-center text-sm text-gray-400">
-            Nenhum teste de física médica cadastrado.
+            Nenhum teste de física médica encontrado.
           </div>
         ) : (
           items.map((t) => (
@@ -87,7 +141,7 @@ export default async function FisicaMedicaPage() {
               </div>
               <div className="mt-2 text-sm text-gray-600">{typeLabels[t.type]}</div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                {t.provider && <span>{t.provider}</span>}
+                {(t.providerRef?.name || t.provider) && <span>{t.providerRef?.name || t.provider}</span>}
                 <span>Agendado: {t.scheduledDate.toLocaleDateString("pt-BR")}</span>
                 <span>Vencimento: {t.dueDate.toLocaleDateString("pt-BR")}</span>
               </div>
@@ -97,7 +151,7 @@ export default async function FisicaMedicaPage() {
       </div>
 
       {/* Desktop: Tabela */}
-      <div className="mt-6 hidden overflow-x-auto rounded-lg border bg-white shadow-sm lg:block">
+      <div className="mt-4 hidden overflow-x-auto rounded-lg border bg-white shadow-sm lg:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
@@ -117,7 +171,7 @@ export default async function FisicaMedicaPage() {
                   colSpan={7}
                   className="px-4 py-8 text-center text-gray-400"
                 >
-                  Nenhum teste de física médica cadastrado.
+                  Nenhum teste de física médica encontrado.
                 </td>
               </tr>
             ) : (
@@ -137,7 +191,7 @@ export default async function FisicaMedicaPage() {
                     {typeLabels[t.type]}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {t.provider || "—"}
+                    {t.providerRef?.name || t.provider || "—"}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {t.scheduledDate.toLocaleDateString("pt-BR")}
@@ -164,6 +218,13 @@ export default async function FisicaMedicaPage() {
           </tbody>
         </table>
       </div>
+
+      <PhysicsPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        perPage={perPage}
+      />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
 import { hasPermission } from "@/lib/auth/permissions";
-import { ServiceType } from "@prisma/client";
+import { MedicalPhysicsType, ServiceType } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { EquipmentDetails } from "./equipment-details";
 import { ServiceStatusSummary } from "./service-status-summary";
+import { PhysicsTestStatusSummary } from "./physics-test-status-summary";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,8 +52,57 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
     }),
   ]);
 
-  // Build service status for each service type
+  // Build physics test status for each test type
   const now = new Date();
+
+  const physicsTestTypes: { type: MedicalPhysicsType; label: string }[] = [
+    { type: "CONTROLE_QUALIDADE", label: "Controle de Qualidade" },
+    { type: "TESTE_CONSTANCIA", label: "Teste de Constância" },
+    { type: "LEVANTAMENTO_RADIOMETRICO", label: "Levantamento Radiométrico" },
+    { type: "TESTE_RADIACAO_FUGA", label: "Radiação de Fuga" },
+  ];
+
+  const physicsTests = await Promise.all(
+    physicsTestTypes.map(async ({ type, label }) => {
+      const lastExecuted = await prisma.medicalPhysicsTest.findFirst({
+        where: { equipmentId: id, tenantId, type, status: "REALIZADA" },
+        orderBy: { executionDate: "desc" },
+        select: { executionDate: true, provider: true, providerRef: { select: { name: true } } },
+      });
+
+      const nextScheduled = await prisma.medicalPhysicsTest.findFirst({
+        where: { equipmentId: id, tenantId, type, status: "AGENDADA" },
+        orderBy: { dueDate: "asc" },
+        select: { id: true, dueDate: true, provider: true, providerRef: { select: { name: true } } },
+      });
+
+      const providerName =
+        nextScheduled?.providerRef?.name ||
+        nextScheduled?.provider ||
+        lastExecuted?.providerRef?.name ||
+        lastExecuted?.provider ||
+        null;
+
+      return {
+        testType: type,
+        label,
+        lastExecution: lastExecuted?.executionDate
+          ? lastExecuted.executionDate.toLocaleDateString("pt-BR")
+          : null,
+        nextDue: nextScheduled?.dueDate
+          ? nextScheduled.dueDate.toLocaleDateString("pt-BR")
+          : null,
+        providerName,
+        status: computeServiceStatus(nextScheduled?.dueDate || null, now),
+        testId: nextScheduled?.id || null,
+      };
+    })
+  );
+
+  // Only show physics section if equipment has any physics tests
+  const hasPhysicsTests = physicsTests.some((t) => t.status !== "na");
+
+  // Build service status for each service type
   const serviceTypes: { type: ServiceType; label: string }[] = [
     { type: "PREVENTIVA", label: "Preventiva" },
     { type: "CALIBRACAO", label: "Calibracao" },
@@ -140,6 +190,7 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
         canDelete={hasPermission(role, "equipment.delete")}
       />
       <ServiceStatusSummary services={services} />
+      {hasPhysicsTests && <PhysicsTestStatusSummary tests={physicsTests} />}
     </>
   );
 }

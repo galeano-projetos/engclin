@@ -93,14 +93,17 @@ export async function deletePhysicsTest(id: string) {
 }
 
 /**
- * Regra especial PRD 3.6:
- * Zera a validade de todos os testes de fisica medica de um equipamento
- * quando uma manutencao corretiva e registrada para ele.
+ * Regra especial PRD 3.6 / RDC 611:
+ * Quando uma manutencao corretiva e resolvida para um equipamento:
+ * 1. Invalida todos os testes REALIZADA (reseta para AGENDADA)
+ * 2. Para cada tipo de teste que o equipamento possui, garante que
+ *    exista pelo menos um teste AGENDADA pendente (cria automaticamente se nao houver)
  */
 export async function invalidatePhysicsTests(
   tenantId: string,
   equipmentId: string
 ) {
+  // 1. Invalidar testes realizados
   await prisma.medicalPhysicsTest.updateMany({
     where: {
       tenantId,
@@ -113,4 +116,59 @@ export async function invalidatePhysicsTests(
       notes: "Teste invalidado: manutencao corretiva registrada. Necessario reagendar.",
     },
   });
+
+  // 2. Auto-criar testes pendentes para tipos sem AGENDADA
+  const allTests = await prisma.medicalPhysicsTest.findMany({
+    where: { tenantId, equipmentId },
+    select: { type: true, status: true, periodicityMonths: true, provider: true, providerId: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (allTests.length === 0) return;
+
+  // Tipos distintos que o equipamento ja possui
+  const typesSeen = new Set(allTests.map((t) => t.type));
+
+  const now = new Date();
+  const testsToCreate: Array<{
+    tenantId: string;
+    equipmentId: string;
+    type: MedicalPhysicsType;
+    scheduledDate: Date;
+    dueDate: Date;
+    status: "AGENDADA";
+    periodicityMonths: number;
+    provider: string | null;
+    providerId: string | null;
+    notes: string;
+  }> = [];
+
+  for (const type of typesSeen) {
+    const hasScheduled = allTests.some(
+      (t) => t.type === type && t.status === "AGENDADA"
+    );
+
+    if (!hasScheduled) {
+      const reference = allTests.find((t) => t.type === type);
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      testsToCreate.push({
+        tenantId,
+        equipmentId,
+        type,
+        scheduledDate: now,
+        dueDate,
+        status: "AGENDADA",
+        periodicityMonths: reference?.periodicityMonths || 12,
+        provider: reference?.provider || null,
+        providerId: reference?.providerId || null,
+        notes: "Teste gerado automaticamente: manutencao corretiva resolvida. RDC 611 exige novo teste.",
+      });
+    }
+  }
+
+  if (testsToCreate.length > 0) {
+    await prisma.medicalPhysicsTest.createMany({ data: testsToCreate });
+  }
 }
