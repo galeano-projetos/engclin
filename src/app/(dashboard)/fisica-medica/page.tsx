@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PhysicsFilters } from "./physics-filters";
 import { PhysicsPagination } from "./physics-pagination";
+import { SyncSeproradButton } from "./sync-seprorad-button";
 import { MaintenanceStatus, MedicalPhysicsType } from "@prisma/client";
 
 const typeLabels: Record<MedicalPhysicsType, string> = {
@@ -112,9 +113,12 @@ export default async function FisicaMedicaPage({ searchParams }: PageProps) {
             {" "}(RDC 611 / IN 90-96)
           </p>
         </div>
-        <Link href="/fisica-medica/novo">
-          <Button>Novo Teste</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <SyncSeproradButton />
+          <Link href="/fisica-medica/novo">
+            <Button>Novo Teste</Button>
+          </Link>
+        </div>
       </div>
 
       <PhysicsFilters equipments={equipments} />
