@@ -30,9 +30,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const CRITICALITY_COLORS: Record<string, string> = {
-  Alta: "#ef4444",
-  Média: "#f59e0b",
-  Baixa: "#22c55e",
+  "1 - Critico": "#ef4444",
+  "2 - Moderado": "#f59e0b",
+  "3 - Baixo": "#22c55e",
 };
 
 const URGENCY_COLORS: Record<string, string> = {
