@@ -36,6 +36,7 @@ export function MaintenanceFilters({ equipments, providers }: MaintenanceFilters
     } else {
       params.delete(key);
     }
+    params.set("page", "1");
     router.push(`/manutencoes?${params.toString()}`);
   }
 
