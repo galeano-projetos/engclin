@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     serviceTypeStats,
   ] = await Promise.all([
     prisma.equipment.count({
-      where: { tenantId, status: { not: "DESCARTADO" } },
+      where: { tenantId },
     }),
     prisma.equipment.count({
       where: { tenantId, status: "ATIVO" },

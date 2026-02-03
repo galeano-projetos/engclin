@@ -206,8 +206,9 @@ async function main() {
     return p.id;
   }
 
-  // Map equipment types
+  // Map equipment types + their periodicities for maintenance creation
   const equipTypeMap = new Map<string, string>(); // name (uppercase) -> id
+  const equipTypePeriodicities = new Map<string, { prev: Periodicity; cal: Periodicity; tse: Periodicity }>(); // id -> periodicities
 
   for (let i = eqpHeaderIdx + 1; i < eqpRows.length; i++) {
     const row = eqpRows[i];
@@ -244,6 +245,7 @@ async function main() {
       },
     });
     equipTypeMap.set(equipName.toUpperCase(), et.id);
+    equipTypePeriodicities.set(et.id, { prev: prevPeriod, cal: calPeriod, tse: tsePeriod });
   }
   console.log(`Tipos de equipamento criados: ${equipTypeMap.size}`);
   console.log(`Fornecedores criados: ${providerMap.size}`);
@@ -353,55 +355,67 @@ async function main() {
     });
     equipCount++;
 
-    // Create maintenance records if dates exist
+    // Create maintenance records for each applicable service type
     const execDate = parseDate(dataManut);
     const nextDate = parseDate(proxManut);
     const providerId = await getOrCreateProvider(quemRealizou);
 
     if (execDate || nextDate) {
-      // Figure out service types from the equipment type periodicities
-      // We'll create a combined "CALIBRACAO" entry since the column says "MANUTENÇÃO/CALIBRAÇÃO E TSE"
-      // The sheet combines all service types into one column, so we create one record
-      // representing the last executed service
+      // Determine which service types apply based on equipment type periodicities
+      const periods = equipmentTypeId ? equipTypePeriodicities.get(equipmentTypeId) : null;
+      const serviceTypes: { svcType: ServiceType; label: string; months: number }[] = [];
 
-      if (execDate) {
-        await prisma.preventiveMaintenance.create({
-          data: {
-            tenantId: tenant.id,
-            equipmentId: equipment.id,
-            type: "Calibracao",
-            serviceType: "CALIBRACAO",
-            scheduledDate: execDate,
-            dueDate: nextDate || execDate,
-            executionDate: execDate,
-            status: "REALIZADA",
-            providerId,
-            provider: quemRealizou || null,
-            periodicityMonths: 12,
-            cost: null,
-          },
-        });
-        maintCount++;
+      if (periods) {
+        if (periods.prev !== "NAO_APLICAVEL") serviceTypes.push({ svcType: "PREVENTIVA", label: "Preventiva", months: periodicityMonths(periods.prev) });
+        if (periods.cal !== "NAO_APLICAVEL") serviceTypes.push({ svcType: "CALIBRACAO", label: "Calibracao", months: periodicityMonths(periods.cal) });
+        if (periods.tse !== "NAO_APLICAVEL") serviceTypes.push({ svcType: "TSE", label: "Teste de Seguranca Eletrica", months: periodicityMonths(periods.tse) });
       }
 
-      if (nextDate) {
-        const now = new Date();
-        const isOverdue = nextDate < now;
-        await prisma.preventiveMaintenance.create({
-          data: {
-            tenantId: tenant.id,
-            equipmentId: equipment.id,
-            type: "Calibracao",
-            serviceType: "CALIBRACAO",
-            scheduledDate: nextDate,
-            dueDate: nextDate,
-            status: isOverdue ? "VENCIDA" : "AGENDADA",
-            providerId,
-            provider: quemRealizou || null,
-            periodicityMonths: 12,
-          },
-        });
-        maintCount++;
+      // If no type matched or no applicable services, default to CALIBRACAO
+      if (serviceTypes.length === 0) {
+        serviceTypes.push({ svcType: "CALIBRACAO", label: "Calibracao", months: 12 });
+      }
+
+      for (const { svcType, label, months } of serviceTypes) {
+        if (execDate) {
+          await prisma.preventiveMaintenance.create({
+            data: {
+              tenantId: tenant.id,
+              equipmentId: equipment.id,
+              type: label,
+              serviceType: svcType,
+              scheduledDate: execDate,
+              dueDate: nextDate || execDate,
+              executionDate: execDate,
+              status: "REALIZADA",
+              providerId,
+              provider: quemRealizou || null,
+              periodicityMonths: months || 12,
+              cost: null,
+            },
+          });
+          maintCount++;
+        }
+
+        if (nextDate) {
+          const now = new Date();
+          const isOverdue = nextDate < now;
+          await prisma.preventiveMaintenance.create({
+            data: {
+              tenantId: tenant.id,
+              equipmentId: equipment.id,
+              type: label,
+              serviceType: svcType,
+              scheduledDate: nextDate,
+              dueDate: nextDate,
+              status: isOverdue ? "VENCIDA" : "AGENDADA",
+              providerId,
+              provider: quemRealizou || null,
+              periodicityMonths: months || 12,
+            },
+          });
+          maintCount++;
+        }
       }
     }
   }
