@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { executePhysicsTest, deletePhysicsTest } from "../actions";
+import { PDFViewer } from "@/components/ui/pdf-viewer";
 import Link from "next/link";
 
 interface TestData {
@@ -57,6 +58,7 @@ export function PhysicsTestDetails({ test }: { test: TestData }) {
   const [showExecuteForm, setShowExecuteForm] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showPDF, setShowPDF] = useState(false);
 
   const canExecute =
     test.status === "AGENDADA" || test.displayStatus === "VENCIDA";
@@ -201,14 +203,12 @@ export function PhysicsTestDetails({ test }: { test: TestData }) {
                 label="Laudo"
                 value={
                   test.reportUrl ? (
-                    <a
-                      href={test.reportUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
+                    <button
+                      onClick={() => setShowPDF(true)}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
                     >
                       Ver laudo
-                    </a>
+                    </button>
                   ) : null
                 }
               />
@@ -227,6 +227,15 @@ export function PhysicsTestDetails({ test }: { test: TestData }) {
           agendamento.
         </p>
       </div>
+
+      {/* PDF Viewer Modal */}
+      {showPDF && test.reportUrl && (
+        <PDFViewer
+          url={test.reportUrl}
+          title={`${typeLabels[test.type] || test.type} — ${test.equipmentName}`}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
     </div>
   );
 }
