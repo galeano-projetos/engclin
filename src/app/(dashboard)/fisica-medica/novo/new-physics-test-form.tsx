@@ -81,7 +81,7 @@ export function NewPhysicsTestForm({
             id="provider"
             name="provider"
             label="Empresa de Física Médica"
-            placeholder="Ex: PhysMed Consultoria"
+            placeholder="Ex: Seprorad"
           />
         </div>
       </div>
