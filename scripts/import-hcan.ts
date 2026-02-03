@@ -82,10 +82,31 @@ function periodicityMonths(p: Periodicity): number {
   return map[p];
 }
 
+/** Find a sheet by name, tolerant of accent differences */
+function findSheet(wb: XLSX.WorkBook, name: string): string | null {
+  // Try exact match first
+  if (wb.Sheets[name]) return name;
+  // Normalize: remove accents and compare
+  const normalize = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const target = normalize(name);
+  for (const sn of wb.SheetNames) {
+    if (normalize(sn) === target) return sn;
+  }
+  return null;
+}
+
 /** Read a sheet as array of arrays - keep raw types so dates remain Date objects */
 function sheetToRows(wb: XLSX.WorkBook, name: string): unknown[][] {
-  const sheet = wb.Sheets[name];
-  if (!sheet) return [];
+  const realName = findSheet(wb, name);
+  if (!realName) {
+    console.warn(`  [WARN] Aba "${name}" nao encontrada. Abas disponiveis: ${wb.SheetNames.join(", ")}`);
+    return [];
+  }
+  if (realName !== name) {
+    console.log(`  [INFO] Aba "${name}" mapeada para "${realName}"`);
+  }
+  const sheet = wb.Sheets[realName];
   return XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
     defval: "",
@@ -187,6 +208,8 @@ async function main() {
     const row = eqpRows[i];
     const equipName = str(row[0]);
     if (!equipName || equipName === "-") continue;
+    // Skip footer/text rows (e.g. "ANEXO II", "Observacoes Tecnicas")
+    if (equipName.toUpperCase().startsWith("ANEXO") || equipName.toUpperCase().startsWith("OBSERVA")) continue;
 
     const contrato = str(row[1]);
     const prevPeriod = mapPeriodicity(row[2]);
@@ -194,8 +217,9 @@ async function main() {
     const tsePeriod = mapPeriodicity(row[4]);
     const empresas = str(row[5]);
     const crit = mapCriticality(row[6]);
-    const quant = parseInt(str(row[7])) || 0;
-    const reserva = parseInt(str(row[8])) || 0;
+    // row[7] is the formula text label (Critico/Moderado/Baixo), skip it
+    const quant = parseInt(str(row[8])) || 0;
+    const reserva = parseInt(str(row[9])) || 0;
 
     // Create provider from "EMPRESAS SERVIÇOS" column
     const providerId = await getOrCreateProvider(empresas);
@@ -282,8 +306,9 @@ async function main() {
 
     // Skip rows without equipment name
     if (!equipName) continue;
-    // Skip sub-header rows
+    // Skip sub-header rows and footer text
     if (equipName.toUpperCase() === "EQUIPAMENTO") continue;
+    if (equipName.toUpperCase().startsWith("TERMO DE")) continue;
 
     const unitId = await getOrCreateUnit(currentSetor || "SEM SETOR");
     if (!unitId) continue;
@@ -628,14 +653,34 @@ async function main() {
     const marca = str(row[3]);
     const ns = str(row[4]);
     const modelo = str(row[5]);
+    // col 12: QUEM REALIZOU, col 13: OBS. ADICIONAIS
+    const quemRealizouRad = str(row[12]);
+    const obsRad = str(row[13]);
 
     const unitId = await getOrCreateUnit(setor || "RADIOLOGIA");
     if (!unitId) continue;
+
+    // Match equipment type
+    let radEquipTypeId: string | null = null;
+    const radNameUpper = equipName.toUpperCase();
+    if (equipTypeMap.has(radNameUpper)) {
+      radEquipTypeId = equipTypeMap.get(radNameUpper)!;
+    } else {
+      for (const [key, id] of equipTypeMap) {
+        if (radNameUpper.includes(key) || key.includes(radNameUpper)) {
+          radEquipTypeId = id;
+          break;
+        }
+      }
+    }
+
+    const radProviderId = await getOrCreateProvider(quemRealizouRad);
 
     const equipment = await prisma.equipment.create({
       data: {
         tenantId: tenant.id,
         unitId: unitId,
+        equipmentTypeId: radEquipTypeId,
         name: equipName,
         brand: marca || null,
         model: modelo || null,
@@ -644,24 +689,28 @@ async function main() {
         criticality: "A",
         status: "ATIVO",
         ownershipType: "PROPRIO",
+        conferenceNotes: obsRad || null,
       },
     });
     radCount++;
 
     // Create medical physics tests:
-    // col 6: TESTE DE ACEITAÇÃO (exec), col 7: PROXIMA (due)
-    // col 8: RADIAÇÃO DE FUGA (exec), col 9: PROXIMA (due)
+    // col 6: TESTE DE ACEITACAO E CONTROLE DE QUALIDADE (exec), col 7: PROXIMA (due)
+    // col 8: TESTE DE RADIACAO DE FUGA DO CABECOTE (exec), col 9: PROXIMA (due)
+    // col 10: LEVANTAMENTO RADIOMETRICO (exec), col 11: PROXIMO (due)
     const testPairs: { execCol: number; dueCol: number; type: "CONTROLE_QUALIDADE" | "TESTE_RADIACAO_FUGA" | "LEVANTAMENTO_RADIOMETRICO" }[] = [
       { execCol: 6, dueCol: 7, type: "CONTROLE_QUALIDADE" },
       { execCol: 8, dueCol: 9, type: "TESTE_RADIACAO_FUGA" },
+      { execCol: 10, dueCol: 11, type: "LEVANTAMENTO_RADIOMETRICO" },
     ];
 
     for (const { execCol, dueCol, type } of testPairs) {
       const execDate = parseDate(row[execCol]);
       const nextDate = parseDate(row[dueCol]);
-      const isNA = str(row[execCol]).toUpperCase() === "N/A";
+      const cellVal = str(row[execCol]).toUpperCase();
+      const isNA = cellVal === "N/A" || cellVal === "";
 
-      if (isNA) continue;
+      if (isNA && !nextDate) continue;
 
       if (execDate) {
         const due = nextDate || new Date(execDate.getFullYear() + 1, execDate.getMonth(), execDate.getDate());
@@ -677,6 +726,8 @@ async function main() {
             dueDate: due,
             executionDate: execDate,
             status: "REALIZADA",
+            providerId: radProviderId,
+            provider: quemRealizouRad || null,
             periodicityMonths: 12,
           },
         });
@@ -691,10 +742,28 @@ async function main() {
               scheduledDate: nextDate,
               dueDate: nextDate,
               status: nextDate < now ? "VENCIDA" : "AGENDADA",
+              providerId: radProviderId,
+              provider: quemRealizouRad || null,
               periodicityMonths: 12,
             },
           });
         }
+      } else if (nextDate) {
+        // Only a future date exists (no execution yet)
+        const now = new Date();
+        await prisma.medicalPhysicsTest.create({
+          data: {
+            tenantId: tenant.id,
+            equipmentId: equipment.id,
+            type,
+            scheduledDate: nextDate,
+            dueDate: nextDate,
+            status: nextDate < now ? "VENCIDA" : "AGENDADA",
+            providerId: radProviderId,
+            provider: quemRealizouRad || null,
+            periodicityMonths: 12,
+          },
+        });
       }
     }
   }
@@ -727,6 +796,11 @@ async function main() {
     const marca = str(row[4]);
     const ns = str(row[5]);
     const modelo = str(row[6]);
+    const aquisicaoDesat = row[7];
+    const dataManutDesat = row[8];
+    const proxManutDesat = row[9];
+    const quemRealizouDesat = str(row[10]);
+    const obsDesat = str(row[11]);
 
     if (setor) currentDesatSetor = setor;
     if (!equipName || equipName.toUpperCase() === "EQUIPAMENTO") continue;
@@ -734,10 +808,28 @@ async function main() {
     const unitId = await getOrCreateUnit(currentDesatSetor || "SEM SETOR");
     if (!unitId) continue;
 
-    await prisma.equipment.create({
+    // Match equipment type
+    let desatEquipTypeId: string | null = null;
+    const desatNameUpper = equipName.toUpperCase();
+    if (equipTypeMap.has(desatNameUpper)) {
+      desatEquipTypeId = equipTypeMap.get(desatNameUpper)!;
+    } else {
+      for (const [key, id] of equipTypeMap) {
+        if (desatNameUpper.includes(key) || key.includes(desatNameUpper)) {
+          desatEquipTypeId = id;
+          break;
+        }
+      }
+    }
+
+    // Build deactivation reason from OBS column
+    const deactivationReason = obsDesat || "Equipamento desativado (importado da planilha HCAN)";
+
+    const desatEquip = await prisma.equipment.create({
       data: {
         tenantId: tenant.id,
         unitId: unitId,
+        equipmentTypeId: desatEquipTypeId,
         name: equipName,
         brand: marca || null,
         model: modelo || null,
@@ -746,10 +838,36 @@ async function main() {
         criticality: crit ? mapCriticality(crit) : "C",
         status: "DESCARTADO",
         ownershipType: "PROPRIO",
-        deactivationReason: "Equipamento desativado (importado da planilha HCAN)",
+        acquisitionDate: parseDate(aquisicaoDesat),
+        deactivationReason,
+        conferenceNotes: obsDesat || null,
       },
     });
     desatCount++;
+
+    // Create maintenance records for deactivated equipment too
+    const execDateDesat = parseDate(dataManutDesat);
+    const nextDateDesat = parseDate(proxManutDesat);
+    const providerIdDesat = await getOrCreateProvider(quemRealizouDesat);
+
+    if (execDateDesat) {
+      await prisma.preventiveMaintenance.create({
+        data: {
+          tenantId: tenant.id,
+          equipmentId: desatEquip.id,
+          type: "Calibracao",
+          serviceType: "CALIBRACAO",
+          scheduledDate: execDateDesat,
+          dueDate: nextDateDesat || execDateDesat,
+          executionDate: execDateDesat,
+          status: "REALIZADA",
+          providerId: providerIdDesat,
+          provider: quemRealizouDesat || null,
+          periodicityMonths: 12,
+        },
+      });
+      maintCount++;
+    }
   }
   console.log(`Equipamentos desativados: ${desatCount}`);
 
