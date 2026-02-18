@@ -1,17 +1,19 @@
 import { requirePermission } from "@/lib/auth/require-role";
 import { getAdminData } from "./actions";
 import { AdminPanel } from "./admin-panel";
+import { planAllows } from "@/lib/auth/plan-features";
 import Link from "next/link";
 
-const adminLinks = [
-  { href: "/admin/fornecedores", label: "Fornecedores", description: "Cadastro de empresas prestadoras de servicos" },
-  { href: "/admin/tipos-equipamento", label: "Tipos de Equipamento", description: "Periodicidades padrao por tipo" },
-  { href: "/admin/contratos", label: "Contratos", description: "Contratos com fornecedores" },
-  { href: "/admin/importar", label: "Importar Dados", description: "Importacao via planilha Excel" },
+const allAdminLinks = [
+  { href: "/admin/fornecedores", label: "Fornecedores", description: "Cadastro de empresas prestadoras de servicos", permission: "provider.view" },
+  { href: "/admin/tipos-equipamento", label: "Tipos de Equipamento", description: "Periodicidades padrao por tipo", permission: "equipmentType.view" },
+  { href: "/admin/contratos", label: "Contratos", description: "Contratos com fornecedores", permission: "contract.view" },
+  { href: "/admin/importar", label: "Importar Dados", description: "Importacao via planilha Excel", permission: "import.execute" },
 ];
 
 export default async function AdminPage() {
-  await requirePermission("admin.users");
+  const { plan } = await requirePermission("admin.users");
+  const adminLinks = allAdminLinks.filter(link => planAllows(plan, link.permission));
   const { units, users, tenant } = await getAdminData();
 
   const serializedUnits = units.map((u) => ({

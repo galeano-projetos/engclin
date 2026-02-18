@@ -17,15 +17,19 @@ interface ProviderOption {
 interface MaintenanceFiltersProps {
   equipments: Equipment[];
   providers: ProviderOption[];
+  allowedServiceTypes?: string[];
 }
 
-const serviceTypeOptions = [
+const allServiceTypeOptions = [
   { value: "PREVENTIVA", label: "Preventiva" },
   { value: "CALIBRACAO", label: "Calibracao" },
   { value: "TSE", label: "TSE" },
 ];
 
-export function MaintenanceFilters({ equipments, providers }: MaintenanceFiltersProps) {
+export function MaintenanceFilters({ equipments, providers, allowedServiceTypes }: MaintenanceFiltersProps) {
+  const serviceTypeOptions = allowedServiceTypes
+    ? allServiceTypeOptions.filter(opt => allowedServiceTypes.includes(opt.value))
+    : allServiceTypeOptions;
   const router = useRouter();
   const searchParams = useSearchParams();
 

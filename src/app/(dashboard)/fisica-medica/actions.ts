@@ -29,6 +29,10 @@ export async function createPhysicsTest(formData: FormData) {
     return { error: "Equipamento, tipo, data agendada e vencimento sao obrigatorios." };
   }
 
+  if (new Date(scheduledDate) > new Date(dueDate)) {
+    return { error: "Data agendada deve ser anterior ou igual ao vencimento." };
+  }
+
   const equipment = await prisma.equipment.findFirst({
     where: { id: equipmentId, tenantId },
   });

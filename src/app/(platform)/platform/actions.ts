@@ -105,8 +105,13 @@ export async function createTenant(formData: FormData) {
   const passwordResult = passwordSchema.safeParse(masterPassword);
   if (!passwordResult.success) return { error: passwordResult.error.issues[0].message };
 
+  // Normalize CNPJ to digits only for consistent comparison
+  const normalizedCnpj = cnpj.replace(/\D/g, "");
+
   // Check duplicates
-  const existingCnpj = await prisma.tenant.findUnique({ where: { cnpj } });
+  const existingCnpj = await prisma.tenant.findFirst({
+    where: { cnpj: normalizedCnpj },
+  });
   if (existingCnpj) return { error: "Ja existe um tenant com este CNPJ" };
 
   const existingEmail = await prisma.user.findUnique({ where: { email: masterEmail.toLowerCase() } });
@@ -118,7 +123,7 @@ export async function createTenant(formData: FormData) {
     const tenant = await tx.tenant.create({
       data: {
         name,
-        cnpj,
+        cnpj: normalizedCnpj,
         plan: planResult.data,
       },
     });
@@ -199,15 +204,18 @@ export async function updateTenant(tenantId: string, formData: FormData) {
   const planResult = planSchema.safeParse(plan);
   if (!planResult.success) return { error: "Plano invalido" };
 
+  // Normalize CNPJ to digits only
+  const normalizedCnpj = cnpj.replace(/\D/g, "");
+
   // Check CNPJ uniqueness (exclude current tenant)
   const existingCnpj = await prisma.tenant.findFirst({
-    where: { cnpj, id: { not: tenantId } },
+    where: { cnpj: normalizedCnpj, id: { not: tenantId } },
   });
   if (existingCnpj) return { error: "Ja existe outro tenant com este CNPJ" };
 
   await prisma.tenant.update({
     where: { id: tenantId },
-    data: { name, cnpj, plan: planResult.data },
+    data: { name, cnpj: normalizedCnpj, plan: planResult.data },
   });
 
   revalidatePath(`/platform/tenants/${tenantId}`);

@@ -41,8 +41,8 @@ export function IntelligencePanel() {
         const data = await runPrioritizationAgent();
         setPriorityData(data);
       }
-    } catch (err) {
-      console.error("Erro ao executar agente:", err);
+    } catch {
+      // Error handled silently - agent results are shown as empty
     } finally {
       setLoading(false);
     }

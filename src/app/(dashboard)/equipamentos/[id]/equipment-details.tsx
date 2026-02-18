@@ -47,6 +47,7 @@ interface EquipmentDetailsProps {
   equipmentTypes?: EquipmentTypeOption[];
   canEdit?: boolean;
   canDelete?: boolean;
+  showQrCode?: boolean;
 }
 
 const statusLabels: Record<string, string> = {
@@ -85,6 +86,7 @@ export function EquipmentDetails({
   equipmentTypes = [],
   canEdit = false,
   canDelete = false,
+  showQrCode = true,
 }: EquipmentDetailsProps) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -232,12 +234,14 @@ export function EquipmentDetails({
       </div>
 
       {/* QR Code */}
-      <QrCodeSection
-        equipmentId={equipment.id}
-        equipmentName={equipment.name}
-        patrimony={equipment.patrimony}
-        unitName={equipment.unitName}
-      />
+      {showQrCode && (
+        <QrCodeSection
+          equipmentId={equipment.id}
+          equipmentName={equipment.name}
+          patrimony={equipment.patrimony}
+          unitName={equipment.unitName}
+        />
+      )}
     </div>
   );
 }

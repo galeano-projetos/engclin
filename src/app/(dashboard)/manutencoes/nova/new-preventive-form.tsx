@@ -22,9 +22,10 @@ interface ProviderOption {
 interface NewPreventiveFormProps {
   equipments: Equipment[];
   providers: ProviderOption[];
+  allowedServiceTypes?: string[];
 }
 
-const serviceTypeOptions = [
+const allServiceTypeOptions = [
   { value: "PREVENTIVA", label: "Preventiva" },
   { value: "CALIBRACAO", label: "Calibracao" },
   { value: "TSE", label: "Teste de Seguranca Eletrica" },
@@ -38,17 +39,22 @@ const periodicityOptions = [
   { value: "60", label: "Quinquenal (60 meses)" },
 ];
 
-export function NewPreventiveForm({ equipments, providers }: NewPreventiveFormProps) {
+export function NewPreventiveForm({ equipments, providers, allowedServiceTypes }: NewPreventiveFormProps) {
+  const serviceTypeOptions = allowedServiceTypes
+    ? allServiceTypeOptions.filter(opt => allowedServiceTypes.includes(opt.value))
+    : allServiceTypeOptions;
   const [state, formAction, isPending] = useActionState(createPreventiveAction, undefined);
   const [scheduledDate, setScheduledDate] = useState("");
   const [periodicityMonths, setPeriodicityMonths] = useState("12");
+  const [manualDueDate, setManualDueDate] = useState("");
 
   const computedDueDate = useMemo(() => {
+    if (manualDueDate) return manualDueDate;
     if (!scheduledDate) return "";
     const d = new Date(scheduledDate);
     d.setMonth(d.getMonth() + parseInt(periodicityMonths));
     return d.toISOString().split("T")[0];
-  }, [scheduledDate, periodicityMonths]);
+  }, [scheduledDate, periodicityMonths, manualDueDate]);
 
   const providerOptions = providers.map((p) => ({ value: p.id, label: p.name }));
 
@@ -100,7 +106,7 @@ export function NewPreventiveForm({ equipments, providers }: NewPreventiveFormPr
             type="date"
             required
             value={computedDueDate}
-            onChange={() => {/* allow manual override via the input */}}
+            onChange={(e) => setManualDueDate(e.target.value)}
           />
           <Select
             id="periodicityMonths"

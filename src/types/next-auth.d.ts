@@ -1,5 +1,5 @@
 import "next-auth";
-import { UserRole } from "@prisma/client";
+import { UserRole, Plan } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -10,6 +10,7 @@ declare module "next-auth" {
       role: UserRole;
       tenantId?: string;
       tenantName?: string;
+      plan?: Plan;
     };
   }
 }

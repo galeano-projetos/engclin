@@ -216,19 +216,30 @@ export async function getServiceTypeStatus(): Promise<ServiceTypeStatusData[]> {
     { type: "TSE" as const, label: "TSE" },
   ];
 
-  const results: ServiceTypeStatusData[] = [];
+  // 2 queries instead of 6 (was N+1 per service type)
+  const [allScheduled, realizedCounts] = await Promise.all([
+    prisma.preventiveMaintenance.findMany({
+      where: { tenantId, status: "AGENDADA" },
+      select: { serviceType: true, dueDate: true },
+    }),
+    prisma.preventiveMaintenance.groupBy({
+      by: ["serviceType"],
+      where: { tenantId, status: "REALIZADA" },
+      _count: { id: true },
+    }),
+  ]);
 
-  for (const { type, label } of types) {
-    const scheduled = await prisma.preventiveMaintenance.findMany({
-      where: { tenantId, status: "AGENDADA", serviceType: type },
-      select: { dueDate: true },
-    });
+  const realizedMap = new Map(
+    realizedCounts.map((r) => [r.serviceType, r._count.id])
+  );
 
+  return types.map(({ type, label }) => {
     let emDia = 0;
     let vencendo = 0;
     let vencida = 0;
 
-    for (const s of scheduled) {
+    for (const s of allScheduled) {
+      if (s.serviceType !== type) continue;
       const diff = Math.ceil(
         (s.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -237,12 +248,13 @@ export async function getServiceTypeStatus(): Promise<ServiceTypeStatusData[]> {
       else emDia++;
     }
 
-    const realizada = await prisma.preventiveMaintenance.count({
-      where: { tenantId, status: "REALIZADA", serviceType: type },
-    });
-
-    results.push({ serviceType: type, label, emDia, vencendo, vencida, realizada });
-  }
-
-  return results;
+    return {
+      serviceType: type,
+      label,
+      emDia,
+      vencendo,
+      vencida,
+      realizada: realizedMap.get(type) || 0,
+    };
+  });
 }

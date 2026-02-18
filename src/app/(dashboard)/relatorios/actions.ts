@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
+import { planAllows } from "@/lib/auth/plan-features";
 
 export interface ReportRow {
   [key: string]: string | number | null;
@@ -62,7 +63,10 @@ export async function getInventoryReport(): Promise<ReportData> {
 // 2. Calibrações Vencidas e a Vencer
 // =============================================
 export async function getCalibrationReport(): Promise<ReportData> {
-  await checkPermission("report.view");
+  const { plan } = await checkPermission("report.view");
+  if (!planAllows(plan, "report.calibracoes")) {
+    throw new Error("Relatório não disponível no seu plano.");
+  }
   const tenantId = await getTenantId();
 
   const now = new Date();
@@ -114,7 +118,10 @@ export async function getCalibrationReport(): Promise<ReportData> {
 // 3. Histórico de Custos por Equipamento
 // =============================================
 export async function getCostReport(): Promise<ReportData> {
-  await checkPermission("report.view");
+  const { plan } = await checkPermission("report.view");
+  if (!planAllows(plan, "report.custos")) {
+    throw new Error("Relatório não disponível no seu plano.");
+  }
   const tenantId = await getTenantId();
 
   const equipments = await prisma.equipment.findMany({
@@ -176,7 +183,10 @@ export async function getCostReport(): Promise<ReportData> {
 // 4. Indicadores de Chamados
 // =============================================
 export async function getTicketIndicatorsReport(): Promise<ReportData> {
-  await checkPermission("report.view");
+  const { plan } = await checkPermission("report.view");
+  if (!planAllows(plan, "report.chamados")) {
+    throw new Error("Relatório não disponível no seu plano.");
+  }
   const tenantId = await getTenantId();
 
   const tickets = await prisma.correctiveMaintenance.findMany({

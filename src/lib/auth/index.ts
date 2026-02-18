@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { UserRole } from "@prisma/client";
+import { UserRole, Plan } from "@prisma/client";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
@@ -47,6 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           tenantId: user.tenantId ?? undefined,
           tenantName: user.tenant?.name ?? undefined,
+          plan: user.tenant?.plan ?? undefined,
         };
       },
     }),
@@ -58,6 +59,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as { role: string }).role;
         token.tenantId = (user as { tenantId?: string }).tenantId;
         token.tenantName = (user as { tenantName?: string }).tenantName;
+        token.plan = (user as { plan?: string }).plan;
       }
       return token;
     },
@@ -67,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = token.role as UserRole;
         session.user.tenantId = token.tenantId as string | undefined;
         session.user.tenantName = token.tenantName as string | undefined;
+        session.user.plan = token.plan as Plan | undefined;
       }
       return session;
     },

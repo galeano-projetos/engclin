@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ServiceType } from "@prisma/client";
 import { safeFormGet, serviceTypeSchema, dateSchema, positiveDecimalSchema, positiveIntSchema, urlSchema } from "@/lib/validation";
+import { planAllows } from "@/lib/auth/plan-features";
 
 const SERVICE_TYPE_TO_LEGACY: Record<string, string> = {
   PREVENTIVA: "Manutencao Preventiva Geral",
@@ -21,10 +22,18 @@ export async function createPreventiveAction(
 }
 
 export async function createPreventive(formData: FormData) {
-  const { tenantId } = await checkPermission("preventive.create");
+  const { tenantId, plan } = await checkPermission("preventive.create");
 
   const equipmentId = formData.get("equipmentId") as string;
   const serviceType = (formData.get("serviceType") as string) || "PREVENTIVA";
+
+  // Plan enforcement: block CALIBRACAO/TSE for plans that don't support them
+  if (serviceType === "CALIBRACAO" && !planAllows(plan, "preventive.calibracao")) {
+    return { error: "Calibração não disponível no seu plano." };
+  }
+  if (serviceType === "TSE" && !planAllows(plan, "preventive.tse")) {
+    return { error: "TSE não disponível no seu plano." };
+  }
   const scheduledDate = formData.get("scheduledDate") as string;
   const dueDate = formData.get("dueDate") as string;
   const periodicityMonths = formData.get("periodicityMonths") as string;
@@ -35,6 +44,10 @@ export async function createPreventive(formData: FormData) {
 
   if (!equipmentId || !scheduledDate || !dueDate) {
     return { error: "Equipamento, data agendada e vencimento sao obrigatorios." };
+  }
+
+  if (new Date(scheduledDate) > new Date(dueDate)) {
+    return { error: "Data agendada deve ser anterior ou igual ao vencimento." };
   }
 
   const equipment = await prisma.equipment.findFirst({
@@ -63,7 +76,7 @@ export async function createPreventive(formData: FormData) {
       serviceType: serviceType as ServiceType,
       scheduledDate: new Date(scheduledDate),
       dueDate: new Date(dueDate),
-      periodicityMonths: periodicityMonths ? parseInt(periodicityMonths) : 12,
+      periodicityMonths: periodicityMonths ? Math.min(Math.max(parseInt(periodicityMonths) || 12, 1), 120) : 12,
       providerId: providerId || undefined,
       provider: providerName,
       status: "AGENDADA",
@@ -100,7 +113,7 @@ export async function executePreventive(id: string, formData: FormData) {
       where: { id, tenantId },
       data: {
         executionDate: new Date(executionDate),
-        cost: cost ? parseFloat(cost) : undefined,
+        cost: cost && !isNaN(parseFloat(cost)) ? parseFloat(cost) : undefined,
         certificateUrl,
         notes,
         status: "REALIZADA",

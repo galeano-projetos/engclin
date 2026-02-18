@@ -6,11 +6,13 @@ import {
   getCostReport,
   getTicketIndicatorsReport,
 } from "./actions";
+import { getAllowedReportKeys } from "@/lib/auth/plan-features";
 
 export default async function RelatoriosPage() {
-  await requirePermission("report.view");
+  const { plan } = await requirePermission("report.view");
+  const allowedReportKeys = getAllowedReportKeys(plan);
 
-  const reports = [
+  const allReports = [
     {
       key: "inventario",
       label: "Inventário Completo",
@@ -40,6 +42,8 @@ export default async function RelatoriosPage() {
       fetchAction: getTicketIndicatorsReport,
     },
   ];
+
+  const reports = allReports.filter(r => allowedReportKeys.includes(r.key));
 
   return (
     <div>

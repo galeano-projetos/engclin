@@ -19,7 +19,12 @@ import {
 } from "./dashboard-charts";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 
-export default async function DashboardPage() {
+interface PageProps {
+  searchParams: Promise<{ upgrade?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const tenantId = await getTenantId();
   const now = new Date();
 
@@ -137,6 +142,11 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {params.upgrade && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Este recurso não está disponível no seu plano atual. Entre em contato para fazer upgrade.
+        </div>
+      )}
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
       <p className="mt-1 text-sm text-gray-500">
         Visao geral do parque tecnologico

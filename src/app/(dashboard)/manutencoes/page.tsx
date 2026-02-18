@@ -7,6 +7,7 @@ import { MaintenanceFilters } from "./maintenance-filters";
 import { MaintenancePagination } from "./maintenance-pagination";
 import { MaintenanceStatus, ServiceType } from "@prisma/client";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
+import { getAllowedServiceTypes } from "@/lib/auth/plan-features";
 
 const statusLabels: Record<string, string> = {
   AGENDADA: "Agendada",
@@ -34,9 +35,14 @@ interface PageProps {
 }
 
 export default async function ManutencoesPage({ searchParams }: PageProps) {
-  const { tenantId } = await requirePermission("preventive.view");
+  const { tenantId, plan } = await requirePermission("preventive.view");
   const params = await searchParams;
-  const { status, equipmentId, serviceType, providerId } = params;
+  const { status, equipmentId, providerId } = params;
+  const allowedServiceTypes = getAllowedServiceTypes(plan);
+  // Ignore serviceType filter if not allowed by plan
+  const serviceType = params.serviceType && allowedServiceTypes.includes(params.serviceType)
+    ? params.serviceType
+    : undefined;
 
   const page = Math.max(1, parseInt(params.page || "1") || 1);
   const rawPerPage = parseInt(params.perPage || "20") || 20;
@@ -48,6 +54,10 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
   // Build where clause - handle virtual "VENCIDA" status on server
   const whereClause = {
     tenantId,
+    // Enforce plan: only show allowed service types
+    ...(allowedServiceTypes.length < 3
+      ? { serviceType: { in: allowedServiceTypes as ServiceType[] } }
+      : {}),
     ...(status === "VENCIDA"
       ? { status: "AGENDADA" as MaintenanceStatus, dueDate: { lt: now } }
       : status
@@ -119,7 +129,7 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      <MaintenanceFilters equipments={equipments} providers={providers} />
+      <MaintenanceFilters equipments={equipments} providers={providers} allowedServiceTypes={allowedServiceTypes} />
 
       {/* Mobile: Cards */}
       <div className="mt-4 space-y-3 lg:hidden">

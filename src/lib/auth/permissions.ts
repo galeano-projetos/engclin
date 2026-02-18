@@ -1,4 +1,5 @@
-import { UserRole } from "@prisma/client";
+import { UserRole, Plan } from "@prisma/client";
+import { planAllows } from "./plan-features";
 
 /**
  * Mapa de permissoes por funcionalidade e role.
@@ -99,8 +100,8 @@ export interface NavPermissions {
   admin: boolean;
 }
 
-export function getNavPermissions(role: UserRole): NavPermissions {
-  return {
+export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
+  const roleBased = {
     dashboard: hasPermission(role, "dashboard.view"),
     equipamentos: hasPermission(role, "equipment.view"),
     manutencoes: hasPermission(role, "preventive.view"),
@@ -109,5 +110,14 @@ export function getNavPermissions(role: UserRole): NavPermissions {
     relatorios: hasPermission(role, "report.view"),
     inteligencia: hasPermission(role, "ai.view"),
     admin: hasPermission(role, "admin.users"),
+  };
+
+  if (!plan || isPlatformAdmin(role)) return roleBased;
+
+  return {
+    ...roleBased,
+    chamados: roleBased.chamados && planAllows(plan, "ticket.view"),
+    fisicaMedica: roleBased.fisicaMedica && planAllows(plan, "physics.view"),
+    inteligencia: roleBased.inteligencia && planAllows(plan, "ai.view"),
   };
 }

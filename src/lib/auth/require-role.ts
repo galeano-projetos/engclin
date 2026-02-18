@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { UserRole } from "@prisma/client";
+import { UserRole, Plan } from "@prisma/client";
 import { hasPermission, isPlatformAdmin } from "./permissions";
+import { planAllows } from "./plan-features";
 
 /**
  * Verifica se o usuário autenticado possui a permissão especificada.
@@ -22,6 +23,7 @@ export async function requirePermission(permission: string) {
     role: string;
     tenantId?: string;
     tenantName?: string;
+    plan?: Plan;
   };
 
   const role = user.role as UserRole;
@@ -30,7 +32,11 @@ export async function requirePermission(permission: string) {
     redirect("/dashboard");
   }
 
-  return { ...user, role };
+  if (!isPlatformAdmin(role) && !planAllows(user.plan, permission)) {
+    redirect("/dashboard?upgrade=true");
+  }
+
+  return { ...user, role, plan: user.plan };
 }
 
 /**
@@ -44,14 +50,18 @@ export async function checkPermission(permission: string) {
     throw new Error("Não autenticado");
   }
 
-  const user = session.user as { role: string; tenantId?: string; id: string };
+  const user = session.user as { role: string; tenantId?: string; id: string; plan?: Plan };
   const role = user.role as UserRole;
 
   if (!hasPermission(role, permission)) {
     throw new Error("Sem permissão para esta ação");
   }
 
-  return { role, tenantId: user.tenantId as string, userId: user.id };
+  if (!isPlatformAdmin(role) && !planAllows(user.plan, permission)) {
+    throw new Error("Recurso não disponível no seu plano. Faça upgrade para acessar.");
+  }
+
+  return { role, tenantId: user.tenantId as string, userId: user.id, plan: user.plan };
 }
 
 /**

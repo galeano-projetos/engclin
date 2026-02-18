@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,11 +69,12 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function TicketDetails({ ticket }: { ticket: TicketData }) {
   const [showResolveForm, setShowResolveForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleAccept() {
     setLoading(true);
     await acceptTicket(ticket.id);
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleResolve(formData: FormData) {
@@ -83,7 +85,7 @@ export function TicketDetails({ ticket }: { ticket: TicketData }) {
   async function handleClose() {
     setLoading(true);
     await closeTicket(ticket.id);
-    window.location.reload();
+    router.refresh();
   }
 
   return (

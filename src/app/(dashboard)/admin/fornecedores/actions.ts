@@ -65,7 +65,7 @@ export async function toggleProviderActive(id: string) {
   if (!provider) return { error: "Fornecedor nao encontrado." };
 
   await prisma.provider.update({
-    where: { id },
+    where: { id, tenantId },
     data: { active: !provider.active },
   });
 

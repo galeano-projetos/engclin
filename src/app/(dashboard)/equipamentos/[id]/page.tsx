@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
 import { hasPermission } from "@/lib/auth/permissions";
 import { MedicalPhysicsType, ServiceType } from "@prisma/client";
+import { planAllows, getAllowedServiceTypes } from "@/lib/auth/plan-features";
 import { notFound } from "next/navigation";
 import { EquipmentDetails } from "./equipment-details";
 import { ServiceStatusSummary } from "./service-status-summary";
@@ -26,7 +27,10 @@ function computeServiceStatus(
 
 export default async function EquipamentoDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { tenantId, role } = await requirePermission("equipment.view");
+  const { tenantId, role, plan } = await requirePermission("equipment.view");
+  const showQrCode = planAllows(plan, "qrcode.view");
+  const allowedServiceTypes = getAllowedServiceTypes(plan);
+  const showPhysics = planAllows(plan, "physics.view");
 
   const equipment = await prisma.equipment.findFirst({
     where: { id, tenantId },
@@ -102,12 +106,13 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
   // Only show physics section if equipment has any physics tests
   const hasPhysicsTests = physicsTests.some((t) => t.status !== "na");
 
-  // Build service status for each service type
-  const serviceTypes: { type: ServiceType; label: string }[] = [
+  // Build service status for each service type (filtered by plan)
+  const allServiceTypes: { type: ServiceType; label: string }[] = [
     { type: "PREVENTIVA", label: "Preventiva" },
     { type: "CALIBRACAO", label: "Calibracao" },
     { type: "TSE", label: "Teste Seg. Eletrica" },
   ];
+  const serviceTypes = allServiceTypes.filter(s => allowedServiceTypes.includes(s.type));
 
   const services = await Promise.all(
     serviceTypes.map(async ({ type, label }) => {
@@ -188,9 +193,10 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
         equipmentTypes={equipmentTypes}
         canEdit={hasPermission(role, "equipment.edit")}
         canDelete={hasPermission(role, "equipment.delete")}
+        showQrCode={showQrCode}
       />
       <ServiceStatusSummary services={services} />
-      {hasPhysicsTests && <PhysicsTestStatusSummary tests={physicsTests} />}
+      {showPhysics && hasPhysicsTests && <PhysicsTestStatusSummary tests={physicsTests} />}
     </>
   );
 }

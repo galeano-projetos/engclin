@@ -52,7 +52,12 @@ export const urlSchema = z.string().optional().refine(
 
 export const emailSchema = z.string().email({ message: "Email invalido" });
 
-export const passwordSchema = z.string().min(6, { message: "Senha deve ter no minimo 6 caracteres" });
+export const passwordSchema = z
+  .string()
+  .min(8, { message: "Senha deve ter no minimo 8 caracteres" })
+  .regex(/[A-Z]/, { message: "Senha deve conter ao menos uma letra maiuscula" })
+  .regex(/[0-9]/, { message: "Senha deve conter ao menos um numero" })
+  .regex(/[^A-Za-z0-9]/, { message: "Senha deve conter ao menos um caractere especial" });
 
 export function safeFormGet(formData: FormData, key: string): string {
   return ((formData.get(key) as string) || "").slice(0, 5000);

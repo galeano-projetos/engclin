@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/auth/require-role";
 import { NewPhysicsTestForm } from "./new-physics-test-form";
 
 export default async function NovoTesteFisicaPage() {
-  const user = await requirePermission("preventive.create");
+  const user = await requirePermission("physics.create");
   const tenantId = user.tenantId;
 
   const equipments = await prisma.equipment.findMany({

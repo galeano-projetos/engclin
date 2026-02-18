@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { getNavPermissions, isPlatformAdmin } from "@/lib/auth/permissions";
-import { UserRole } from "@prisma/client";
+import { UserRole, Plan } from "@prisma/client";
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +19,7 @@ export default async function DashboardLayout({
     name: string;
     role: string;
     tenantName?: string;
+    plan?: Plan;
   };
 
   // PLATFORM_ADMIN deve usar /platform
@@ -26,7 +27,7 @@ export default async function DashboardLayout({
     redirect("/platform");
   }
 
-  const navPermissions = { ...getNavPermissions(user.role as UserRole) };
+  const navPermissions = { ...getNavPermissions(user.role as UserRole, user.plan as Plan | undefined) };
 
   return (
     <DashboardShell

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { Client } from "pg";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  * Proxy para download de documentos do portal Seprorad.
  * Busca o PDF diretamente do banco da Seprorad e retorna ao usuario.
  * Requer autenticacao via sessao do engclin.
+ * Valida que o documento pertence ao tenant do usuario.
  */
 export async function GET(
   _request: Request,
@@ -21,12 +23,26 @@ export async function GET(
   }
 
   const { docId } = await params;
+
+  // Validate cross-tenant access: document must be linked to a test in user's tenant
+  const linkedTest = await prisma.medicalPhysicsTest.findFirst({
+    where: {
+      tenantId: session.user.tenantId,
+      notes: { contains: `seprorad:${docId}` },
+    },
+    select: { id: true },
+  });
+
+  if (!linkedTest) {
+    return NextResponse.json({ error: "Documento nao encontrado" }, { status: 404 });
+  }
+
   const seproradUrl = process.env.SEPRORAD_DATABASE_URL;
 
   if (!seproradUrl) {
     return NextResponse.json(
-      { error: "SEPRORAD_DATABASE_URL not configured" },
-      { status: 500 }
+      { error: "Servico indisponivel" },
+      { status: 503 }
     );
   }
 
@@ -57,9 +73,9 @@ export async function GET(
         "Content-Length": String(buffer.length),
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erro interno" },
+      { error: "Erro ao buscar documento" },
       { status: 500 }
     );
   } finally {

@@ -123,7 +123,7 @@ export async function toggleUserActive(userId: string) {
   }
 
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: userId, tenantId },
     data: { active: !user.active },
   });
 

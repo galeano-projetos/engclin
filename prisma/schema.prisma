@@ -223,6 +223,7 @@ model Equipment {
   contractEquipments     ContractEquipment[]
 
   @@index([tenantId])
+  @@index([tenantId, status])
   @@index([unitId])
   @@index([equipmentTypeId])
   @@map("equipments")
@@ -267,6 +268,9 @@ model PreventiveMaintenance {
   providerRef   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, status, dueDate])
+  @@index([tenantId, serviceType])
   @@index([equipmentId])
   @@index([dueDate])
   @@index([providerId])
@@ -301,10 +305,11 @@ model CorrectiveMaintenance {
   updatedAt     DateTime     @updatedAt
 
   equipment  Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  openedBy   User      @relation("TicketOpener", fields: [openedById], references: [id])
-  assignedTo User?     @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  openedBy   User      @relation("TicketOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  assignedTo User?     @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
+  @@index([tenantId, status])
   @@index([equipmentId])
   @@index([openedById])
   @@index([assignedToId])
@@ -349,6 +354,7 @@ model MedicalPhysicsTest {
   providerRef Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
+  @@index([tenantId, status])
   @@index([equipmentId])
   @@index([dueDate])
   @@index([providerId])

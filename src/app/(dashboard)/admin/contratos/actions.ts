@@ -68,7 +68,7 @@ export async function createContract(formData: FormData) {
       name: name.trim(),
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      value: value ? parseFloat(value) : undefined,
+      value: value && !isNaN(parseFloat(value)) ? parseFloat(value) : undefined,
       documentUrl,
       equipments: {
         create: equipmentIds
@@ -85,9 +85,21 @@ export async function createContract(formData: FormData) {
 export async function deleteContract(id: string) {
   const { tenantId } = await checkPermission("contract.delete");
 
-  await prisma.contract.delete({
+  const contract = await prisma.contract.findFirst({
     where: { id, tenantId },
   });
+
+  if (!contract) {
+    return { error: "Contrato nao encontrado." };
+  }
+
+  try {
+    await prisma.contract.delete({
+      where: { id, tenantId },
+    });
+  } catch {
+    return { error: "Erro ao excluir contrato. Verifique dependencias." };
+  }
 
   revalidatePath("/admin/contratos");
   return { success: true };

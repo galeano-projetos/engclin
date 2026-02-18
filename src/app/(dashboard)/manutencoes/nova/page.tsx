@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
 import { NewPreventiveForm } from "./new-preventive-form";
+import { getAllowedServiceTypes } from "@/lib/auth/plan-features";
 
 export default async function NovaPreventivePage() {
   const user = await requirePermission("preventive.create");
   const tenantId = user.tenantId;
+  const allowedServiceTypes = getAllowedServiceTypes(user.plan);
 
   const [equipments, providers] = await Promise.all([
     prisma.equipment.findMany({
@@ -28,7 +30,7 @@ export default async function NovaPreventivePage() {
         Agende uma preventiva, calibracao ou teste de seguranca para um equipamento.
       </p>
       <div className="mt-6">
-        <NewPreventiveForm equipments={equipments} providers={providers} />
+        <NewPreventiveForm equipments={equipments} providers={providers} allowedServiceTypes={allowedServiceTypes} />
       </div>
     </div>
   );
