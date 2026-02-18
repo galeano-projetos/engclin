@@ -19,8 +19,8 @@ const items = [
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
         </svg>
       ),
-      title: "Centralizacao Total na Nuvem",
-      desc: "Inventario completo, historico rastreavel e acesso de qualquer lugar.",
+      title: "Centralização Total na Nuvem",
+      desc: "Inventário completo, histórico rastreável e acesso de qualquer lugar.",
     },
   },
   {
@@ -30,7 +30,7 @@ const items = [
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
       ),
-      title: "Risco de Nao Conformidade",
+      title: "Risco de Não Conformidade",
       desc: "Prazos perdidos, auditorias reprovadas e multas da ANVISA.",
     },
     solution: {
@@ -40,7 +40,7 @@ const items = [
         </svg>
       ),
       title: "Conformidade Automatizada (RDC 611)",
-      desc: "Alertas de calibracao, checklists e relatorios prontos para auditoria.",
+      desc: "Alertas de calibração, checklists e relatórios prontos para auditoria.",
     },
   },
   {
@@ -50,7 +50,7 @@ const items = [
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.384 3.065A1.003 1.003 0 015 17.347V6.653a1.003 1.003 0 011.036-.888l5.384 3.065M15.75 7.5l-2.25 3 2.25 3m3.75-9v13.5" />
         </svg>
       ),
-      title: "Manutencao Reativa e Custosa",
+      title: "Manutenção Reativa e Custosa",
       desc: "Equipamentos quebram sem aviso, gerando custos altos e downtime.",
     },
     solution: {
@@ -59,8 +59,8 @@ const items = [
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       ),
-      title: "Manutencao Preditiva com IA",
-      desc: "Algoritmos preveem falhas e agendam manutencoes antes do problema.",
+      title: "Manutenção Preditiva com IA",
+      desc: "Algoritmos preveem falhas e agendam manutenções antes do problema.",
     },
   },
 ];
@@ -69,15 +69,15 @@ export function ProblemSolution() {
   const { ref, inView } = useInView();
 
   return (
-    <section id="problemas" ref={ref} className="scroll-mt-20 bg-slate-950 px-4 py-24 sm:px-6 lg:px-8">
+    <section id="problemas" ref={ref} className="scroll-mt-20 bg-gray-50 px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className={`text-center ${inView ? "animate-fade-in-up" : "opacity-0"}`}>
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
-            Sua gestao de equipamentos ainda esta no passado?
+          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+            Sua gestão de equipamentos ainda está no passado?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
-            Planilhas complexas, falta de controle e riscos de conformidade sao gargalos
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+            Planilhas complexas, falta de controle e riscos de conformidade são gargalos
             que impedem o crescimento.
           </p>
         </div>
@@ -87,18 +87,18 @@ export function ProblemSolution() {
           {items.map((item, i) => (
             <div
               key={i}
-              className={`overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 ${
+              className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${
                 inView ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: inView ? `${i * 150 + 200}ms` : undefined }}
             >
               {/* Problem */}
-              <div className="border-b border-white/5 p-6">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
+              <div className="border-b border-gray-100 p-6">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
                   {item.problem.icon}
                 </div>
-                <h3 className="text-sm font-semibold text-red-400">{item.problem.title}</h3>
-                <p className="mt-1 text-sm text-slate-500">{item.problem.desc}</p>
+                <h3 className="text-sm font-semibold text-red-600">{item.problem.title}</h3>
+                <p className="mt-1 text-sm text-gray-500">{item.problem.desc}</p>
               </div>
 
               {/* Arrow */}
@@ -110,11 +110,11 @@ export function ProblemSolution() {
 
               {/* Solution */}
               <div className="p-6">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500/10 text-teal-400">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
                   {item.solution.icon}
                 </div>
-                <h3 className="text-sm font-semibold text-teal-400">{item.solution.title}</h3>
-                <p className="mt-1 text-sm text-slate-400">{item.solution.desc}</p>
+                <h3 className="text-sm font-semibold text-teal-600">{item.solution.title}</h3>
+                <p className="mt-1 text-sm text-gray-600">{item.solution.desc}</p>
               </div>
             </div>
           ))}

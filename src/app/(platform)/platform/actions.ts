@@ -223,3 +223,121 @@ export async function updateTenant(tenantId: string, formData: FormData) {
   revalidatePath("/platform");
   return { success: true };
 }
+
+// ============================================================
+// Redefinir senha de um usuario (gera senha provisoria)
+// ============================================================
+
+const roleSchema = z.enum(["MASTER", "TECNICO", "COORDENADOR", "FISCAL"]);
+
+function generateRandomPassword(): string {
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const digits = "0123456789";
+  const special = "!@#$%&*";
+  const all = upper + lower + digits + special;
+
+  // Garantir ao menos 1 de cada tipo
+  let password =
+    upper[Math.floor(Math.random() * upper.length)] +
+    lower[Math.floor(Math.random() * lower.length)] +
+    digits[Math.floor(Math.random() * digits.length)] +
+    special[Math.floor(Math.random() * special.length)];
+
+  for (let i = password.length; i < 12; i++) {
+    password += all[Math.floor(Math.random() * all.length)];
+  }
+
+  // Embaralhar
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+}
+
+export async function resetUserPassword(userId: string) {
+  await checkPlatformAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "Usuário não encontrado" };
+
+  const newPassword = generateRandomPassword();
+  const hashedPassword = await hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword },
+  });
+
+  return { success: true, temporaryPassword: newPassword };
+}
+
+// ============================================================
+// Toggle usuario ativo/inativo (pela plataforma)
+// ============================================================
+
+export async function toggleUserActiveFromPlatform(userId: string) {
+  await checkPlatformAdmin();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "Usuário não encontrado" };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { active: !user.active },
+  });
+
+  const tenantId = user.tenantId;
+  if (tenantId) {
+    revalidatePath(`/platform/tenants/${tenantId}`);
+  }
+  revalidatePath("/platform/tenants");
+  return { success: true };
+}
+
+// ============================================================
+// Criar usuario para um tenant (pela plataforma)
+// ============================================================
+
+export async function createUserForTenant(tenantId: string, formData: FormData) {
+  await checkPlatformAdmin();
+
+  const name = (formData.get("name") as string)?.trim();
+  const email = (formData.get("email") as string)?.trim();
+  const password = formData.get("password") as string;
+  const role = formData.get("role") as string;
+
+  if (!name) return { error: "Nome é obrigatório" };
+
+  const emailResult = emailSchema.safeParse(email);
+  if (!emailResult.success) return { error: "Email inválido" };
+
+  const passwordResult = passwordSchema.safeParse(password);
+  if (!passwordResult.success) return { error: passwordResult.error.issues[0].message };
+
+  const roleResult = roleSchema.safeParse(role);
+  if (!roleResult.success) return { error: "Perfil inválido" };
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) return { error: "Tenant não encontrado" };
+
+  const existingEmail = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (existingEmail) return { error: "Este email já está cadastrado" };
+
+  const hashedPassword = await hash(password, 10);
+
+  await prisma.user.create({
+    data: {
+      tenantId,
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: roleResult.data,
+    },
+  });
+
+  revalidatePath(`/platform/tenants/${tenantId}`);
+  revalidatePath("/platform/tenants");
+  revalidatePath("/platform");
+  return { success: true };
+}

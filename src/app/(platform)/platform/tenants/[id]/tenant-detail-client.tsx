@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toggleTenantActive, updateTenant } from "../../actions";
+import {
+  toggleTenantActive,
+  updateTenant,
+  resetUserPassword,
+  toggleUserActiveFromPlatform,
+  createUserForTenant,
+} from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -16,11 +22,18 @@ const planOptions = [
 ];
 
 const roleLabels: Record<string, string> = {
-  MASTER: "Engenheira Clinica",
-  TECNICO: "Tecnico",
+  MASTER: "Master",
+  TECNICO: "Técnico",
   COORDENADOR: "Coordenador",
   FISCAL: "Fiscal",
 };
+
+const roleOptions = [
+  { value: "MASTER", label: "Master" },
+  { value: "COORDENADOR", label: "Coordenador" },
+  { value: "TECNICO", label: "Técnico" },
+  { value: "FISCAL", label: "Fiscal" },
+];
 
 interface TenantData {
   id: string;
@@ -28,6 +41,7 @@ interface TenantData {
   cnpj: string;
   plan: string;
   active: boolean;
+  createdAt: Date;
   users: {
     id: string;
     name: string;
@@ -45,6 +59,18 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
   const [toggling, setToggling] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Password reset modal
+  const [resetModal, setResetModal] = useState<{
+    userName: string;
+    password: string;
+  } | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+
+  // Create user form
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   async function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,6 +106,48 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
     setToggling(false);
   }
 
+  async function handleResetPassword(userId: string, userName: string) {
+    setResettingId(userId);
+    const result = await resetUserPassword(userId);
+    setResettingId(null);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.temporaryPassword) {
+      setResetModal({ userName, password: result.temporaryPassword });
+    }
+  }
+
+  async function handleToggleUser(userId: string) {
+    setTogglingUserId(userId);
+    const result = await toggleUserActiveFromPlatform(userId);
+    setTogglingUserId(null);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      router.refresh();
+    }
+  }
+
+  async function handleCreateUser(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setCreatingUser(true);
+    setError("");
+
+    const formData = new FormData(e.currentTarget);
+    const result = await createUserForTenant(tenant.id, formData);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccess("Usuário criado com sucesso");
+      setShowCreateUser(false);
+      router.refresh();
+    }
+    setCreatingUser(false);
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center gap-3">
@@ -102,9 +170,9 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       {success && <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">{success}</div>}
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-gray-500">Usuarios</p>
+          <p className="text-sm text-gray-500">Usuários</p>
           <p className="text-2xl font-bold">{tenant.users.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
@@ -114,6 +182,12 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
         <div className="rounded-lg border bg-white p-4">
           <p className="text-sm text-gray-500">Unidades</p>
           <p className="text-2xl font-bold">{tenant._count.units}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-sm text-gray-500">Criado em</p>
+          <p className="text-lg font-bold">
+            {new Date(tenant.createdAt).toLocaleDateString("pt-BR")}
+          </p>
         </div>
       </div>
 
@@ -141,10 +215,44 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
 
       {/* Users list */}
       <div className="rounded-lg border bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Usuarios do Tenant</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Usuários do Tenant ({tenant.users.length})
+          </h2>
+          <Button
+            variant="secondary"
+            onClick={() => setShowCreateUser(!showCreateUser)}
+          >
+            {showCreateUser ? "Cancelar" : "Adicionar Usuário"}
+          </Button>
+        </div>
+
+        {/* Create user form */}
+        {showCreateUser && (
+          <form
+            onSubmit={handleCreateUser}
+            className="mb-4 space-y-3 rounded-lg border border-teal-200 bg-teal-50 p-4"
+          >
+            <h3 className="text-sm font-semibold text-teal-800">Novo Usuário</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input name="name" label="Nome" required />
+              <Input name="email" label="Email" type="email" required />
+              <Input name="password" label="Senha" type="text" required />
+              <Select
+                name="role"
+                label="Perfil"
+                options={roleOptions}
+                defaultValue="COORDENADOR"
+              />
+            </div>
+            <Button type="submit" loading={creatingUser}>
+              Criar Usuário
+            </Button>
+          </form>
+        )}
 
         {tenant.users.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum usuario.</p>
+          <p className="text-sm text-gray-500">Nenhum usuário.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -154,20 +262,69 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
                   <th className="pb-2 font-medium">Email</th>
                   <th className="pb-2 font-medium">Perfil</th>
                   <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Criado em</th>
+                  <th className="pb-2 font-medium text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {tenant.users.map((user) => (
                   <tr key={user.id} className="border-b last:border-0">
-                    <td className="py-2 font-medium text-gray-900">{user.name}</td>
-                    <td className="py-2 text-gray-600">{user.email}</td>
-                    <td className="py-2">
+                    <td className="py-2.5 font-medium text-gray-900">{user.name}</td>
+                    <td className="py-2.5 text-gray-600">{user.email}</td>
+                    <td className="py-2.5">
                       <Badge variant="info">{roleLabels[user.role] || user.role}</Badge>
                     </td>
-                    <td className="py-2">
+                    <td className="py-2.5">
                       <Badge variant={user.active ? "success" : "muted"}>
                         {user.active ? "Ativo" : "Inativo"}
                       </Badge>
+                    </td>
+                    <td className="py-2.5 text-gray-500 text-xs">
+                      {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleResetPassword(user.id, user.name)}
+                          disabled={resettingId === user.id}
+                          className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                          title="Redefinir senha"
+                        >
+                          {resettingId === user.id ? (
+                            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleToggleUser(user.id)}
+                          disabled={togglingUserId === user.id}
+                          className={`rounded p-1.5 hover:bg-gray-100 disabled:opacity-50 ${
+                            user.active ? "text-yellow-500 hover:text-yellow-600" : "text-green-500 hover:text-green-600"
+                          }`}
+                          title={user.active ? "Desativar usuário" : "Ativar usuário"}
+                        >
+                          {togglingUserId === user.id ? (
+                            <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : user.active ? (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -176,6 +333,27 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
           </div>
         )}
       </div>
+
+      {/* Password Reset Modal */}
+      {resetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Senha Provisória</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Nova senha gerada para <strong>{resetModal.userName}</strong>:
+            </p>
+            <div className="mt-3 rounded-md bg-gray-100 p-3 text-center font-mono text-lg font-bold text-gray-900 select-all">
+              {resetModal.password}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Copie esta senha e envie ao usuário. Ela não será exibida novamente.
+            </p>
+            <div className="mt-4 flex justify-end">
+              <Button onClick={() => setResetModal(null)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

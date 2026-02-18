@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { ReportData } from "./actions";
+import { runReportInsightAgent } from "../inteligencia/agents";
 
 interface ReportOption {
   key: string;
@@ -19,12 +20,15 @@ export function ReportViewer({ reports }: ReportViewerProps) {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [data, setData] = useState<ReportData | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [insight, setInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
 
   function handleSelect(reportKey: string) {
     const report = reports.find((r) => r.key === reportKey);
     if (!report) return;
 
     setSelectedReport(reportKey);
+    setInsight(null);
     startTransition(async () => {
       const result = await report.fetchAction();
       setData(result);
@@ -119,9 +123,35 @@ export function ReportViewer({ reports }: ReportViewerProps) {
                 {data.rows.length} registro{data.rows.length !== 1 && "s"}
               </p>
             </div>
-            <Button onClick={handleExportCsv} variant="secondary">
-              Exportar CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={async () => {
+                  if (!data) return;
+                  setInsightLoading(true);
+                  try {
+                    const csvSample = data.rows
+                      .slice(0, 15)
+                      .map((row) =>
+                        data.columns.map((c) => `${c.label}: ${row[c.key] ?? "—"}`).join(" | ")
+                      )
+                      .join("\n");
+                    const result = await runReportInsightAgent(data.title, csvSample);
+                    setInsight(result.insight);
+                  } catch {
+                    setInsight("Nao foi possivel gerar insights neste momento.");
+                  } finally {
+                    setInsightLoading(false);
+                  }
+                }}
+                variant="secondary"
+                loading={insightLoading}
+              >
+                {insightLoading ? "Gerando..." : "Insights IA"}
+              </Button>
+              <Button onClick={handleExportCsv} variant="secondary">
+                Exportar CSV
+              </Button>
+            </div>
           </div>
 
           {/* Mobile: Cards */}
@@ -183,6 +213,19 @@ export function ReportViewer({ reports }: ReportViewerProps) {
               </tbody>
             </table>
           </div>
+
+          {/* Insights IA */}
+          {insight && (
+            <div className="mt-4 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                </svg>
+                <h3 className="text-sm font-semibold text-indigo-800">Insights da IA</h3>
+              </div>
+              <p className="text-sm text-indigo-700 leading-relaxed">{insight}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

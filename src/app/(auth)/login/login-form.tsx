@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
 export function LoginForm() {
   const router = useRouter();
@@ -97,6 +98,15 @@ export function LoginForm() {
       <Button type="submit" loading={loading} className="w-full">
         Entrar
       </Button>
+
+      <div className="text-center">
+        <Link
+          href="/forgot-password"
+          className="text-sm text-teal-600 hover:text-teal-800"
+        >
+          Esqueci minha senha
+        </Link>
+      </div>
     </form>
   );
 }
