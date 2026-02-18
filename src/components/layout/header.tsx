@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VitalisLogo } from "@/components/ui/vitalis-logo";
@@ -60,9 +61,9 @@ export function Header({ userName, tenantName, userRole, onMenuToggle }: HeaderP
           </Badge>
         )}
         {userName && (
-          <span className="hidden text-sm text-gray-600 sm:inline">
+          <Link href="/perfil" className="hidden text-sm text-gray-600 hover:text-blue-600 sm:inline">
             {userName}
-          </span>
+          </Link>
         )}
         <Button
           variant="ghost"

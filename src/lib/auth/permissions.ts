@@ -75,6 +75,15 @@ const permissions: Record<string, UserRole[]> = {
   // Importacao
   "import.execute": ["MASTER"],
 
+  // Treinamentos
+  "training.view": ["MASTER", "TECNICO", "COORDENADOR"],
+  "training.create": ["MASTER"],
+  "training.complete": ["MASTER", "TECNICO"],
+
+  // Integracoes ERP
+  "integration.view": ["MASTER"],
+  "integration.manage": ["MASTER"],
+
   // Plataforma (somente PLATFORM_ADMIN)
   "platform.tenants": ["PLATFORM_ADMIN"],
   "platform.dashboard": ["PLATFORM_ADMIN"],
@@ -106,6 +115,7 @@ export interface NavPermissions {
   chamados: boolean;
   ordensServico: boolean;
   fisicaMedica: boolean;
+  treinamentos: boolean;
   relatorios: boolean;
   inteligencia: boolean;
   admin: boolean;
@@ -119,6 +129,7 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     chamados: hasPermission(role, "ticket.view"),
     ordensServico: hasPermission(role, "os.view"),
     fisicaMedica: hasPermission(role, "physics.view"),
+    treinamentos: hasPermission(role, "training.view"),
     relatorios: hasPermission(role, "report.view"),
     inteligencia: hasPermission(role, "ai.view"),
     admin: hasPermission(role, "admin.users"),
@@ -131,6 +142,7 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     chamados: roleBased.chamados && planAllows(plan, "ticket.view"),
     ordensServico: roleBased.ordensServico && planAllows(plan, "os.view"),
     fisicaMedica: roleBased.fisicaMedica && planAllows(plan, "physics.view"),
+    treinamentos: roleBased.treinamentos && planAllows(plan, "training.view"),
     inteligencia: roleBased.inteligencia && planAllows(plan, "ai.view"),
   };
 }

@@ -10,6 +10,7 @@ const allAdminLinks = [
   { href: "/admin/checklists", label: "Checklists", description: "Templates de checklist para manutencao preventiva", permission: "checklist.view" },
   { href: "/admin/contratos", label: "Contratos", description: "Contratos com fornecedores", permission: "contract.view" },
   { href: "/admin/importar", label: "Importar Dados", description: "Importacao via planilha Excel", permission: "import.execute" },
+  { href: "/admin/integracoes", label: "Integracoes ERP", description: "Conecte ao Tasy e sincronize equipamentos", permission: "integration.view" },
 ];
 
 export default async function AdminPage() {

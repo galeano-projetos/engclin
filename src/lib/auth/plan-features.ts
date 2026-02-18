@@ -59,6 +59,15 @@ const planRestrictions: Record<string, Plan[]> = {
   "os.view": ["PROFISSIONAL", "ENTERPRISE"],
   "os.manage": ["PROFISSIONAL", "ENTERPRISE"],
 
+  // Treinamentos (PROFISSIONAL+)
+  "training.view": ["PROFISSIONAL", "ENTERPRISE"],
+  "training.create": ["PROFISSIONAL", "ENTERPRISE"],
+  "training.complete": ["PROFISSIONAL", "ENTERPRISE"],
+
+  // Integracoes ERP (ENTERPRISE)
+  "integration.view": ["ENTERPRISE"],
+  "integration.manage": ["ENTERPRISE"],
+
   // Inteligencia IA (ENTERPRISE)
   "ai.view": ["ENTERPRISE"],
 
