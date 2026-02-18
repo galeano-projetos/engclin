@@ -2,9 +2,14 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
 import { NewTicketForm } from "./new-ticket-form";
 
-export default async function NovoChamadoPage() {
+interface PageProps {
+  searchParams: Promise<{ equipmentId?: string }>;
+}
+
+export default async function NovoChamadoPage({ searchParams }: PageProps) {
   const user = await requirePermission("ticket.create");
   const tenantId = user.tenantId;
+  const { equipmentId } = await searchParams;
 
   const equipments = await prisma.equipment.findMany({
     where: { tenantId, status: { not: "DESCARTADO" } },
@@ -19,7 +24,7 @@ export default async function NovoChamadoPage() {
         Abra um chamado de manutenção corretiva para um equipamento com problema.
       </p>
       <div className="mt-6">
-        <NewTicketForm equipments={equipments} />
+        <NewTicketForm equipments={equipments} defaultEquipmentId={equipmentId} />
       </div>
     </div>
   );

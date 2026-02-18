@@ -14,9 +14,10 @@ interface Equipment {
 
 interface NewTicketFormProps {
   equipments: Equipment[];
+  defaultEquipmentId?: string;
 }
 
-export function NewTicketForm({ equipments }: NewTicketFormProps) {
+export function NewTicketForm({ equipments, defaultEquipmentId }: NewTicketFormProps) {
   const [state, formAction, isPending] = useActionState(createTicketAction, undefined);
 
   return (
@@ -41,6 +42,7 @@ export function NewTicketForm({ equipments }: NewTicketFormProps) {
               value: eq.id,
               label: `${eq.name}${eq.patrimony ? ` (${eq.patrimony})` : ""}`,
             }))}
+            defaultValue={defaultEquipmentId}
             required
           />
           <Select

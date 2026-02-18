@@ -41,6 +41,19 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
     },
   });
 
+  const statusLabels: Record<string, string> = {
+    ATIVO: "Ativo",
+    INATIVO: "Inativo",
+    EM_MANUTENCAO: "Em manutenção",
+    DESCARTADO: "Descartado",
+  };
+
+  const criticalityLabels: Record<string, string> = {
+    A: "Alta",
+    B: "Moderada",
+    C: "Baixa",
+  };
+
   if (!equipment) {
     notFound();
   }
@@ -156,6 +169,26 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
                   </dd>
                 </div>
               )}
+              {equipment.serialNumber && (
+                <div className="flex justify-between">
+                  <dt className="text-sm text-gray-500">Nº de Série</dt>
+                  <dd className="text-sm font-medium text-gray-900">
+                    {equipment.serialNumber}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Status</dt>
+                <dd className="text-sm font-medium text-gray-900">
+                  {statusLabels[equipment.status] ?? equipment.status}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Criticidade</dt>
+                <dd className="text-sm font-medium text-gray-900">
+                  {criticalityLabels[equipment.criticality] ?? equipment.criticality}
+                </dd>
+              </div>
             </dl>
 
             {/* Status da calibração */}
@@ -174,6 +207,17 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
                 )}
               </div>
             </div>
+
+            {/* Botão Reportar Problema */}
+            <a
+              href={`/login?callbackUrl=${encodeURIComponent(`/chamados/novo?equipmentId=${equipment.id}`)}`}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              Reportar Problema
+            </a>
           </div>
         </div>
 

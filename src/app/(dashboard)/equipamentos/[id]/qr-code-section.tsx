@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { NiimbotPrintButton } from "@/components/shared/niimbot-print-button";
 
 interface QrCodeSectionProps {
   equipmentId: string;
@@ -163,6 +164,12 @@ export function QrCodeSection({
 
               <div className="flex flex-wrap gap-2">
                 <Button onClick={handlePrint}>Imprimir Etiqueta</Button>
+                <NiimbotPrintButton
+                  equipmentName={equipmentName}
+                  patrimony={patrimony}
+                  unitName={unitName}
+                  qrDataUrl={qrDataUrl}
+                />
                 <Button
                   variant="secondary"
                   onClick={() => {
