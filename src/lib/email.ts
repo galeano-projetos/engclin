@@ -1,14 +1,16 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM_EMAIL = "Vitalis <noreply@vitalis.app>";
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function sendPasswordResetEmail(
   email: string,
   resetUrl: string
 ) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: email,
     subject: "Redefinir sua senha - Vitalis",

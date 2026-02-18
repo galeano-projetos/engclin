@@ -1,8 +1,10 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 /**
  * Gera texto com GPT-4o-mini (rapido e barato).
@@ -12,7 +14,7 @@ export async function generateText(
   systemPrompt: string,
   userPrompt: string
 ): Promise<string> {
-  const response = await openai.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
@@ -33,7 +35,7 @@ export async function generateTextAdvanced(
   systemPrompt: string,
   userPrompt: string
 ): Promise<string> {
-  const response = await openai.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
@@ -52,7 +54,7 @@ export async function generateTextAdvanced(
 export async function chatCompletion(
   messages: { role: "system" | "user" | "assistant"; content: string }[]
 ): Promise<string> {
-  const response = await openai.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: "gpt-4o",
     messages,
     temperature: 0.5,
