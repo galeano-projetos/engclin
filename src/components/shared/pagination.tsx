@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 interface PaginationProps {
+  basePath: string;
   currentPage: number;
   totalPages: number;
   totalCount: number;
@@ -19,7 +20,8 @@ const PER_PAGE_OPTIONS = [
   { value: "0", label: "Todos" },
 ];
 
-export function EquipmentPagination({
+export function Pagination({
+  basePath,
   currentPage,
   totalPages,
   totalCount,
@@ -38,9 +40,9 @@ export function EquipmentPagination({
           current.delete(key);
         }
       }
-      return `/equipamentos?${current.toString()}`;
+      return `${basePath}?${current.toString()}`;
     },
-    [searchParams]
+    [searchParams, basePath]
   );
 
   function goToPage(page: number) {
@@ -48,13 +50,11 @@ export function EquipmentPagination({
   }
 
   function handlePerPageChange(value: string) {
-    // Reset to page 1 when changing items per page
     router.push(buildUrl({ perPage: value, page: "1" }));
   }
 
   const showAll = perPage === 0;
 
-  // Generate page numbers to display
   function getPageNumbers(): (number | "...")[] {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -86,7 +86,7 @@ export function EquipmentPagination({
         <select
           value={String(perPage)}
           onChange={(e) => handlePerPageChange(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-md border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           {PER_PAGE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -99,25 +99,25 @@ export function EquipmentPagination({
 
       {/* Page navigation */}
       {!showAll && totalPages > 1 && (
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1.5">
           <button
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[44px] rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Anterior
           </button>
 
           {getPageNumbers().map((p, idx) =>
             p === "..." ? (
-              <span key={`ellipsis-${idx}`} className="px-2 text-sm text-gray-400">
+              <span key={`ellipsis-${idx}`} className="px-1 text-sm text-gray-400">
                 ...
               </span>
             ) : (
               <button
                 key={p}
                 onClick={() => goToPage(p)}
-                className={`min-w-[36px] rounded-md border px-2 py-1.5 text-sm font-medium ${
+                className={`min-h-[44px] min-w-[44px] rounded-md border px-2 py-2 text-sm font-medium ${
                   p === currentPage
                     ? "border-blue-600 bg-blue-600 text-white"
                     : "border-gray-300 text-gray-700 hover:bg-gray-50"
@@ -131,7 +131,7 @@ export function EquipmentPagination({
           <button
             onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= totalPages}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[44px] rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Proximo
           </button>

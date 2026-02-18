@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/require-role";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MaintenanceFilters } from "./maintenance-filters";
-import { MaintenancePagination } from "./maintenance-pagination";
+import { Pagination } from "@/components/shared/pagination";
 import { MaintenanceStatus, ServiceType } from "@prisma/client";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import { getAllowedServiceTypes } from "@/lib/auth/plan-features";
@@ -236,7 +236,8 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
       </div>
 
       {/* Paginacao */}
-      <MaintenancePagination
+      <Pagination
+        basePath="/manutencoes"
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}

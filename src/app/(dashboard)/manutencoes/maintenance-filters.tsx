@@ -49,7 +49,7 @@ export function MaintenanceFilters({ equipments, providers, allowedServiceTypes 
   }
 
   return (
-    <div className="mt-4 flex flex-wrap items-end gap-3">
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <Select
         id="status"
         label="Status"

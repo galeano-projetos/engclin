@@ -4,7 +4,7 @@ import { requirePermission } from "@/lib/auth/require-role";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PhysicsFilters } from "./physics-filters";
-import { PhysicsPagination } from "./physics-pagination";
+import { Pagination } from "@/components/shared/pagination";
 import { SyncSeproradButton } from "./sync-seprorad-button";
 import { MaintenanceStatus, MedicalPhysicsType } from "@prisma/client";
 
@@ -223,7 +223,8 @@ export default async function FisicaMedicaPage({ searchParams }: PageProps) {
         </table>
       </div>
 
-      <PhysicsPagination
+      <Pagination
+        basePath="/fisica-medica"
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}

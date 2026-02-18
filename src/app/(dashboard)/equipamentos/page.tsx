@@ -5,7 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EquipmentFilters } from "./equipment-filters";
-import { EquipmentPagination } from "./equipment-pagination";
+import { Pagination } from "@/components/shared/pagination";
 import { Criticality, EquipmentStatus, ServiceType } from "@prisma/client";
 import { criticalityDisplay } from "@/lib/utils/periodicity";
 
@@ -289,7 +289,8 @@ export default async function EquipamentosPage({ searchParams }: PageProps) {
       </div>
 
       {/* Paginacao */}
-      <EquipmentPagination
+      <Pagination
+        basePath="/equipamentos"
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}

@@ -54,7 +54,7 @@ export function EquipmentFilters({ units }: EquipmentFiltersProps) {
   }
 
   return (
-    <div className="mt-4 flex flex-wrap items-end gap-3">
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
       <div className="flex flex-1 items-end gap-2" style={{ minWidth: 200 }}>
         <div className="flex-1">
           <Input

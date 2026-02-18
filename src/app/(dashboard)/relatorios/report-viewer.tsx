@@ -124,7 +124,28 @@ export function ReportViewer({ reports }: ReportViewerProps) {
             </Button>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-lg border bg-white shadow-sm">
+          {/* Mobile: Cards */}
+          <div className="mt-4 space-y-3 lg:hidden">
+            {data.rows.length === 0 ? (
+              <div className="rounded-lg border bg-white p-8 text-center text-sm text-gray-400">
+                Nenhum dado encontrado para este relatorio.
+              </div>
+            ) : (
+              data.rows.map((row, i) => (
+                <div key={i} className="rounded-lg border bg-white p-4 shadow-sm">
+                  {data.columns.map((col) => (
+                    <div key={col.key} className="flex justify-between border-b border-gray-100 py-2 last:border-b-0">
+                      <span className="text-xs font-medium text-gray-500">{col.label}</span>
+                      <span className="ml-2 text-right text-sm text-gray-900">{formatCell(row[col.key])}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Tabela */}
+          <div className="mt-4 hidden overflow-x-auto rounded-lg border bg-white shadow-sm lg:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>

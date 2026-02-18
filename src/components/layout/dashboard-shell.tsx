@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
+import { BottomNav } from "./bottom-nav";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -38,12 +39,16 @@ export function DashboardShell({
             navPermissions={navPermissions}
           />
           <div className="flex flex-1 flex-col">
-            <main className="flex-1 p-4 lg:p-6">{children}</main>
-            <footer className="border-t bg-white px-4 py-3 text-center text-xs text-gray-400">
+            <main className="flex-1 p-4 pb-20 lg:p-6 lg:pb-6">{children}</main>
+            <footer className="mb-16 border-t bg-white px-4 py-3 text-center text-xs text-gray-400 lg:mb-0">
               Uma empresa <span className="font-semibold text-gray-500">Seprorad</span>
             </footer>
           </div>
         </div>
+        <BottomNav
+          navPermissions={navPermissions}
+          onMenuToggle={() => setSidebarOpen((prev) => !prev)}
+        />
       </div>
     </SessionProvider>
   );
