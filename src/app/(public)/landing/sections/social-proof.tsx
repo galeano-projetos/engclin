@@ -46,28 +46,6 @@ export function SocialProof() {
           </p>
         </div>
 
-        {/* Partner logos */}
-        <div
-          className={`mt-12 flex flex-wrap items-center justify-center gap-10 ${
-            inView ? "animate-fade-in-up" : "opacity-0"
-          }`}
-          style={{ animationDelay: inView ? "150ms" : undefined }}
-        >
-          {/* Seprorad */}
-          <div className="text-lg font-bold tracking-wider text-gray-300 transition-colors hover:text-gray-500">
-            SEPRORAD
-          </div>
-          {/* Placeholder logos */}
-          {["Partner A", "Partner B", "Partner C"].map((name) => (
-            <div
-              key={name}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-400"
-            >
-              {name}
-            </div>
-          ))}
-        </div>
-
         {/* Testimonials */}
         <div className="mt-16 grid gap-8 lg:grid-cols-3">
           {testimonials.map((t, i) => (

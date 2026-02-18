@@ -38,8 +38,7 @@ export const plans: PricingPlan[] = [
     annualTotal: 7280,
     description:
       "Para equipes que precisam de conformidade total e gestão avançada.",
-    highlighted: true,
-    badge: "Mais Popular",
+    highlighted: false,
     limits: "Usuários ilimitados",
     features: [
       "Tudo do Essencial +",
@@ -64,8 +63,8 @@ export const plans: PricingPlan[] = [
     annualTotal: 9980,
     description:
       "Para redes e hospitais que exigem IA, integração e controle multi-unidade.",
-    highlighted: false,
-    badge: "Máximo Poder",
+    highlighted: true,
+    badge: "Mais Popular",
     limits: "Multi-unidade",
     features: [
       "Tudo do Profissional +",
