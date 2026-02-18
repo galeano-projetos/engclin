@@ -7,6 +7,7 @@ import { invalidatePhysicsTests } from "@/app/(dashboard)/fisica-medica/actions"
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { safeFormGet, urgencySchema } from "@/lib/validation";
+import { createServiceOrderInTx } from "@/lib/service-order";
 
 export async function createTicketAction(
   _prevState: { error?: string } | undefined,
@@ -40,8 +41,8 @@ export async function createTicket(formData: FormData) {
     return { error: "Equipamento nao encontrado." };
   }
 
-  await prisma.$transaction([
-    prisma.correctiveMaintenance.create({
+  await prisma.$transaction(async (tx) => {
+    const ticket = await tx.correctiveMaintenance.create({
       data: {
         tenantId,
         equipmentId,
@@ -50,14 +51,20 @@ export async function createTicket(formData: FormData) {
         urgency: urgency.data,
         status: "ABERTO",
       },
-    }),
-    prisma.equipment.update({
+    });
+
+    await tx.equipment.update({
       where: { id: equipmentId, tenantId },
       data: { status: "EM_MANUTENCAO" },
-    }),
-  ]);
+    });
+
+    await createServiceOrderInTx(tx, tenantId, {
+      correctiveMaintenanceId: ticket.id,
+    });
+  });
 
   revalidatePath("/chamados");
+  revalidatePath("/ordens-servico");
   redirect("/chamados");
 }
 

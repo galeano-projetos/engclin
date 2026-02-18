@@ -56,6 +56,10 @@ const permissions: Record<string, UserRole[]> = {
   "equipmentType.edit": ["MASTER"],
   "equipmentType.delete": ["MASTER"],
 
+  // Ordens de Servico
+  "os.view": ["MASTER", "TECNICO", "COORDENADOR", "FISCAL"],
+  "os.manage": ["MASTER", "TECNICO"],
+
   // Contratos
   "contract.view": ["MASTER", "TECNICO"],
   "contract.create": ["MASTER"],
@@ -94,6 +98,7 @@ export interface NavPermissions {
   equipamentos: boolean;
   manutencoes: boolean;
   chamados: boolean;
+  ordensServico: boolean;
   fisicaMedica: boolean;
   relatorios: boolean;
   inteligencia: boolean;
@@ -106,6 +111,7 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     equipamentos: hasPermission(role, "equipment.view"),
     manutencoes: hasPermission(role, "preventive.view"),
     chamados: hasPermission(role, "ticket.view"),
+    ordensServico: hasPermission(role, "os.view"),
     fisicaMedica: hasPermission(role, "physics.view"),
     relatorios: hasPermission(role, "report.view"),
     inteligencia: hasPermission(role, "ai.view"),
@@ -117,6 +123,7 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
   return {
     ...roleBased,
     chamados: roleBased.chamados && planAllows(plan, "ticket.view"),
+    ordensServico: roleBased.ordensServico && planAllows(plan, "os.view"),
     fisicaMedica: roleBased.fisicaMedica && planAllows(plan, "physics.view"),
     inteligencia: roleBased.inteligencia && planAllows(plan, "ai.view"),
   };

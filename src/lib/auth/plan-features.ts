@@ -49,6 +49,10 @@ const planRestrictions: Record<string, Plan[]> = {
   "equipmentType.edit": ["PROFISSIONAL", "ENTERPRISE"],
   "equipmentType.delete": ["PROFISSIONAL", "ENTERPRISE"],
 
+  // Ordens de Servico (PROFISSIONAL+)
+  "os.view": ["PROFISSIONAL", "ENTERPRISE"],
+  "os.manage": ["PROFISSIONAL", "ENTERPRISE"],
+
   // Inteligencia IA (ENTERPRISE)
   "ai.view": ["ENTERPRISE"],
 

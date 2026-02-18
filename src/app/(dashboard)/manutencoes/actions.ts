@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { ServiceType } from "@prisma/client";
 import { safeFormGet, serviceTypeSchema, dateSchema, positiveDecimalSchema, positiveIntSchema, urlSchema } from "@/lib/validation";
 import { planAllows } from "@/lib/auth/plan-features";
+import { createServiceOrderInTx } from "@/lib/service-order";
 
 const SERVICE_TYPE_TO_LEGACY: Record<string, string> = {
   PREVENTIVA: "Manutencao Preventiva Geral",
@@ -68,22 +69,29 @@ export async function createPreventive(formData: FormData) {
     providerName = prov?.name;
   }
 
-  await prisma.preventiveMaintenance.create({
-    data: {
-      tenantId,
-      equipmentId,
-      type: legacyType,
-      serviceType: serviceType as ServiceType,
-      scheduledDate: new Date(scheduledDate),
-      dueDate: new Date(dueDate),
-      periodicityMonths: periodicityMonths ? Math.min(Math.max(parseInt(periodicityMonths) || 12, 1), 120) : 12,
-      providerId: providerId || undefined,
-      provider: providerName,
-      status: "AGENDADA",
-    },
+  await prisma.$transaction(async (tx) => {
+    const maintenance = await tx.preventiveMaintenance.create({
+      data: {
+        tenantId,
+        equipmentId,
+        type: legacyType,
+        serviceType: serviceType as ServiceType,
+        scheduledDate: new Date(scheduledDate),
+        dueDate: new Date(dueDate),
+        periodicityMonths: periodicityMonths ? Math.min(Math.max(parseInt(periodicityMonths) || 12, 1), 120) : 12,
+        providerId: providerId || undefined,
+        provider: providerName,
+        status: "AGENDADA",
+      },
+    });
+
+    await createServiceOrderInTx(tx, tenantId, {
+      preventiveMaintenanceId: maintenance.id,
+    });
   });
 
   revalidatePath("/manutencoes");
+  revalidatePath("/ordens-servico");
   redirect("/manutencoes");
 }
 

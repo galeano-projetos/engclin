@@ -18,12 +18,15 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  lastOsNumber Int      @default(0)
+
   users          User[]
   units          Unit[]
   equipments     Equipment[]
   providers      Provider[]
   equipmentTypes EquipmentType[]
   contracts      Contract[]
+  serviceOrders  ServiceOrder[]
 
   @@map("tenants")
 }
@@ -264,8 +267,9 @@ model PreventiveMaintenance {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  providerRef   Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  equipment     Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  providerRef   Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  serviceOrder  ServiceOrder?
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -304,9 +308,10 @@ model CorrectiveMaintenance {
   closedAt      DateTime?
   updatedAt     DateTime     @updatedAt
 
-  equipment  Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  openedBy   User      @relation("TicketOpener", fields: [openedById], references: [id], onDelete: Restrict)
-  assignedTo User?     @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  equipment    Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  openedBy     User          @relation("TicketOpener", fields: [openedById], references: [id], onDelete: Restrict)
+  assignedTo   User?         @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  serviceOrder ServiceOrder?
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -403,4 +408,34 @@ model ContractEquipment {
   @@id([contractId, equipmentId])
   @@index([equipmentId])
   @@map("contract_equipments")
+}
+
+// ============================================================
+// SERVICE ORDER (Ordem de Servico)
+// ============================================================
+model ServiceOrder {
+  id          String      @id @default(cuid())
+  tenantId    String
+  number      Int         // Numero sequencial por tenant
+  status      OrderStatus @default(ABERTA)
+  issuedAt    DateTime    @default(now())
+  completedAt DateTime?
+
+  preventiveMaintenanceId String? @unique
+  correctiveMaintenanceId String? @unique
+
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  preventiveMaintenance PreventiveMaintenance? @relation(fields: [preventiveMaintenanceId], references: [id], onDelete: Cascade)
+  correctiveMaintenance CorrectiveMaintenance? @relation(fields: [correctiveMaintenanceId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("service_orders")
+}
+
+enum OrderStatus {
+  ABERTA
+  EM_EXECUCAO
+  CONCLUIDA
 }
