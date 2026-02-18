@@ -198,6 +198,11 @@ enum OwnershipType {
   COMODATO
 }
 
+enum DepreciationMethod {
+  LINEAR
+  ACELERADA
+}
+
 // ============================================================
 // EQUIPMENT (Equipamento medico)
 // ============================================================
@@ -217,6 +222,9 @@ model Equipment {
   loanProvider     String?         // Fornecedor comodato (texto livre)
   acquisitionDate  DateTime?
   acquisitionValue Decimal?        // Valor de aquisicao (precisao financeira)
+  vidaUtilAnos         Int?                @default(10)    // Vida util em anos
+  metodoDepreciacao    DepreciationMethod  @default(LINEAR)
+  valorResidual        Decimal?            // Valor residual apos depreciacao
   photoUrl         String?
   deactivationDate   DateTime?
   deactivationReason String?

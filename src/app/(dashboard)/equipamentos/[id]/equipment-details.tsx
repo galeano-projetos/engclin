@@ -28,6 +28,9 @@ interface SerializedEquipment {
   equipmentTypeName: string | null;
   ownershipType: string;
   loanProvider: string | null;
+  vidaUtilAnos: number | null;
+  metodoDepreciacao: string;
+  valorResidual: number | null;
 }
 
 interface Unit {
@@ -48,6 +51,7 @@ interface EquipmentDetailsProps {
   canEdit?: boolean;
   canDelete?: boolean;
   showQrCode?: boolean;
+  plan?: string;
 }
 
 const statusLabels: Record<string, string> = {
@@ -87,6 +91,7 @@ export function EquipmentDetails({
   canEdit = false,
   canDelete = false,
   showQrCode = true,
+  plan,
 }: EquipmentDetailsProps) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -132,8 +137,12 @@ export function EquipmentDetails({
             equipmentTypeId: equipment.equipmentTypeId,
             ownershipType: equipment.ownershipType,
             loanProvider: equipment.loanProvider,
+            vidaUtilAnos: equipment.vidaUtilAnos,
+            metodoDepreciacao: equipment.metodoDepreciacao,
+            valorResidual: equipment.valorResidual,
           }}
           action={updateEquipmentAction}
+          plan={plan}
         />
       </div>
     );

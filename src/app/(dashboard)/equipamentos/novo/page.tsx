@@ -32,6 +32,7 @@ export default async function NovoEquipamentoPage() {
           units={units}
           equipmentTypes={equipmentTypes}
           action={createEquipmentAction}
+          plan={user.plan}
         />
       </div>
     </div>

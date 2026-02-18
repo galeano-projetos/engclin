@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
+import { requirePermission } from "@/lib/auth/require-role";
+import { planAllows } from "@/lib/auth/plan-features";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import {
@@ -19,6 +21,7 @@ import {
 } from "./dashboard-charts";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import { computeGlobalMtbfMttr, formatHours } from "@/lib/mtbf-mttr";
+import { computeDepreciationSummary, formatBRL } from "@/lib/depreciation";
 
 interface PageProps {
   searchParams: Promise<{ upgrade?: string }>;
@@ -26,6 +29,7 @@ interface PageProps {
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const params = await searchParams;
+  const { plan } = await requirePermission("dashboard.view");
   const tenantId = await getTenantId();
   const now = new Date();
 
@@ -44,6 +48,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     chartCalibStatus,
     serviceTypeStats,
     allClosedTickets,
+    equipmentsForDepreciation,
   ] = await Promise.all([
     prisma.equipment.count({
       where: { tenantId },
@@ -102,6 +107,19 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       select: { equipmentId: true, openedAt: true, closedAt: true },
       orderBy: [{ equipmentId: "asc" }, { openedAt: "asc" }],
     }),
+    prisma.equipment.findMany({
+      where: { tenantId, status: { not: "DESCARTADO" } },
+      select: {
+        id: true,
+        name: true,
+        patrimony: true,
+        acquisitionValue: true,
+        acquisitionDate: true,
+        vidaUtilAnos: true,
+        metodoDepreciacao: true,
+        valorResidual: true,
+      },
+    }),
   ]);
 
   // overdueCount is already a number from count()
@@ -113,6 +131,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       closedAt: t.closedAt!,
     }))
   );
+
+  // Depreciacao (Enterprise only)
+  const showDepreciation = planAllows(plan, "depreciation.view");
+  const depreciationSummary = showDepreciation
+    ? computeDepreciationSummary(
+        equipmentsForDepreciation.map((e) => ({
+          ...e,
+          acquisitionValue: e.acquisitionValue ? Number(e.acquisitionValue) : null,
+          valorResidual: e.valorResidual ? Number(e.valorResidual) : null,
+        }))
+      )
+    : null;
 
   const stats = [
     {
@@ -220,6 +250,65 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               : "Necessario 2+ chamados por equipamento"}
           </p>
         </div>
+      </div>
+
+      {/* Patrimonio Total - Depreciacao */}
+      <div className="mt-6">
+        {showDepreciation && depreciationSummary ? (
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              Patrimonio Total
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Valor de Aquisicao
+                </p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">
+                  {formatBRL(depreciationSummary.totalAcquisitionValue)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Valor Contabil Atual
+                </p>
+                <p className="mt-1 text-2xl font-bold text-blue-600">
+                  {formatBRL(depreciationSummary.totalBookValue)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500">
+                  Depreciacao Acumulada
+                </p>
+                <p className="mt-1 text-2xl font-bold text-red-600">
+                  {formatBRL(depreciationSummary.totalAccumulatedDepreciation)}
+                  {depreciationSummary.totalAcquisitionValue > 0 && (
+                    <span className="ml-2 text-sm font-normal text-gray-400">
+                      ({((depreciationSummary.totalAccumulatedDepreciation / depreciationSummary.totalAcquisitionValue) * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Patrimonio Total
+                </h3>
+                <p className="mt-1 text-xs text-gray-400">
+                  Controle de depreciacao
+                </p>
+              </div>
+              <span className="text-2xl">&#128274;</span>
+            </div>
+            <p className="mt-3 text-sm text-gray-500">
+              Disponivel no plano Enterprise.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Service type breakdown */}

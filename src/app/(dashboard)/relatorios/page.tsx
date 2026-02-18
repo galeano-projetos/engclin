@@ -5,6 +5,7 @@ import {
   getCalibrationReport,
   getCostReport,
   getTicketIndicatorsReport,
+  getDepreciationReport,
 } from "./actions";
 import { getAllowedReportKeys } from "@/lib/auth/plan-features";
 
@@ -40,6 +41,13 @@ export default async function RelatoriosPage() {
       description:
         "Tempo médio de atendimento e reincidência de chamados por equipamento.",
       fetchAction: getTicketIndicatorsReport,
+    },
+    {
+      key: "depreciacao",
+      label: "Depreciação de Ativos",
+      description:
+        "Valor contábil, depreciação acumulada e percentual de depreciação por equipamento.",
+      fetchAction: getDepreciationReport,
     },
   ];
 

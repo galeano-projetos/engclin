@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Criticality, EquipmentStatus, OwnershipType } from "@prisma/client";
+import { Criticality, DepreciationMethod, EquipmentStatus, OwnershipType } from "@prisma/client";
 
 interface EquipmentFormData {
   name: string;
@@ -20,6 +20,9 @@ interface EquipmentFormData {
   loanProvider?: string;
   acquisitionDate?: string;
   acquisitionValue?: string;
+  vidaUtilAnos?: string;
+  metodoDepreciacao?: string;
+  valorResidual?: string;
 }
 
 function parseFormData(formData: FormData): EquipmentFormData {
@@ -37,6 +40,9 @@ function parseFormData(formData: FormData): EquipmentFormData {
     loanProvider: (formData.get("loanProvider") as string) || undefined,
     acquisitionDate: (formData.get("acquisitionDate") as string) || undefined,
     acquisitionValue: (formData.get("acquisitionValue") as string) || undefined,
+    vidaUtilAnos: (formData.get("vidaUtilAnos") as string) || undefined,
+    metodoDepreciacao: (formData.get("metodoDepreciacao") as string) || undefined,
+    valorResidual: (formData.get("valorResidual") as string) || undefined,
   };
 }
 
@@ -48,7 +54,7 @@ export async function createEquipmentAction(
 }
 
 export async function createEquipment(formData: FormData) {
-  const { tenantId } = await checkPermission("equipment.create");
+  const { tenantId, plan } = await checkPermission("equipment.create");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
@@ -93,6 +99,13 @@ export async function createEquipment(formData: FormData) {
       acquisitionValue: data.acquisitionValue
         ? parseFloat(data.acquisitionValue)
         : undefined,
+      ...(plan === "ENTERPRISE" && {
+        vidaUtilAnos: data.vidaUtilAnos ? parseInt(data.vidaUtilAnos) : 10,
+        metodoDepreciacao: (data.metodoDepreciacao as DepreciationMethod) || "LINEAR",
+        valorResidual: data.valorResidual
+          ? parseFloat(data.valorResidual)
+          : null,
+      }),
     },
   });
 
@@ -109,7 +122,7 @@ export async function updateEquipmentAction(
 }
 
 export async function updateEquipment(id: string, formData: FormData) {
-  const { tenantId } = await checkPermission("equipment.edit");
+  const { tenantId, plan } = await checkPermission("equipment.edit");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
@@ -154,6 +167,13 @@ export async function updateEquipment(id: string, formData: FormData) {
       acquisitionValue: data.acquisitionValue
         ? parseFloat(data.acquisitionValue)
         : null,
+      ...(plan === "ENTERPRISE" && {
+        vidaUtilAnos: data.vidaUtilAnos ? parseInt(data.vidaUtilAnos) : 10,
+        metodoDepreciacao: (data.metodoDepreciacao as DepreciationMethod) || "LINEAR",
+        valorResidual: data.valorResidual
+          ? parseFloat(data.valorResidual)
+          : null,
+      }),
     },
   });
 

@@ -8,7 +8,9 @@ import { EquipmentDetails } from "./equipment-details";
 import { ServiceStatusSummary } from "./service-status-summary";
 import { PhysicsTestStatusSummary } from "./physics-test-status-summary";
 import { MtbfMttrSummary } from "./mtbf-mttr-summary";
+import { DepreciationSection } from "./depreciation-section";
 import { computeEquipmentMtbfMttr } from "@/lib/mtbf-mttr";
+import { computeDepreciation } from "@/lib/depreciation";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -70,6 +72,19 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
       closedAt: t.closedAt!,
     }))
   );
+
+  // Depreciacao (Enterprise only)
+  const showDepreciation = planAllows(plan, "depreciation.view");
+  let depreciationData = null;
+  if (showDepreciation && equipment.acquisitionValue && equipment.acquisitionDate) {
+    depreciationData = computeDepreciation({
+      acquisitionValue: Number(equipment.acquisitionValue),
+      acquisitionDate: equipment.acquisitionDate,
+      vidaUtilAnos: equipment.vidaUtilAnos ?? 10,
+      metodoDepreciacao: equipment.metodoDepreciacao,
+      valorResidual: equipment.valorResidual ? Number(equipment.valorResidual) : 0,
+    });
+  }
 
   // Build physics test status for each test type
   const now = new Date();
@@ -203,12 +218,23 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
           equipmentTypeName: equipment.equipmentType?.name || null,
           ownershipType: equipment.ownershipType,
           loanProvider: equipment.loanProvider,
+          vidaUtilAnos: equipment.vidaUtilAnos,
+          metodoDepreciacao: equipment.metodoDepreciacao,
+          valorResidual: equipment.valorResidual ? Number(equipment.valorResidual) : null,
         }}
         units={units}
         equipmentTypes={equipmentTypes}
         canEdit={hasPermission(role, "equipment.edit")}
         canDelete={hasPermission(role, "equipment.delete")}
         showQrCode={showQrCode}
+        plan={plan}
+      />
+      <DepreciationSection
+        showDepreciation={showDepreciation}
+        depreciationData={depreciationData}
+        acquisitionValue={equipment.acquisitionValue ? Number(equipment.acquisitionValue) : null}
+        metodoDepreciacao={equipment.metodoDepreciacao}
+        vidaUtilAnos={equipment.vidaUtilAnos}
       />
       <ServiceStatusSummary services={services} />
       <MtbfMttrSummary

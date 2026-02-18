@@ -73,6 +73,10 @@ const planRestrictions: Record<string, Plan[]> = {
 
   // QR Code (ENTERPRISE)
   "qrcode.view": ["ENTERPRISE"],
+
+  // Depreciacao de ativos (ENTERPRISE)
+  "depreciation.view": ["ENTERPRISE"],
+  "report.depreciacao": ["ENTERPRISE"],
 };
 
 /**
@@ -105,5 +109,6 @@ export function getAllowedReportKeys(plan: Plan | undefined): string[] {
   if (planAllows(plan, "report.calibracoes")) keys.push("calibracoes");
   if (planAllows(plan, "report.custos")) keys.push("custos");
   if (planAllows(plan, "report.chamados")) keys.push("chamados");
+  if (planAllows(plan, "report.depreciacao")) keys.push("depreciacao");
   return keys;
 }

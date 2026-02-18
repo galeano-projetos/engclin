@@ -32,6 +32,9 @@ interface EquipmentData {
   equipmentTypeId: string | null;
   ownershipType: string;
   loanProvider: string | null;
+  vidaUtilAnos: number | null;
+  metodoDepreciacao: string;
+  valorResidual: number | null;
 }
 
 interface EquipmentFormProps {
@@ -42,6 +45,7 @@ interface EquipmentFormProps {
     state: { error?: string } | undefined,
     formData: FormData
   ) => Promise<{ error?: string } | undefined>;
+  plan?: string;
 }
 
 function formatDate(date: Date | null): string {
@@ -54,6 +58,7 @@ export function EquipmentForm({
   equipmentTypes = [],
   equipment,
   action,
+  plan,
 }: EquipmentFormProps) {
   const [state, formAction, isPending] = useActionState(action, undefined);
   const [ownershipType, setOwnershipType] = useState(equipment?.ownershipType || "PROPRIO");
@@ -241,6 +246,44 @@ export function EquipmentForm({
             placeholder="Ex: 45000.00"
             defaultValue={equipment?.acquisitionValue?.toString() || ""}
           />
+          {plan === "ENTERPRISE" ? (
+            <>
+              <Input
+                id="vidaUtilAnos"
+                name="vidaUtilAnos"
+                label="Vida Util (anos)"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="Ex: 10"
+                defaultValue={equipment?.vidaUtilAnos?.toString() || "10"}
+              />
+              <Select
+                id="metodoDepreciacao"
+                name="metodoDepreciacao"
+                label="Metodo de Depreciacao"
+                options={[
+                  { value: "LINEAR", label: "Linear" },
+                  { value: "ACELERADA", label: "Acelerada" },
+                ]}
+                defaultValue={equipment?.metodoDepreciacao || "LINEAR"}
+              />
+              <Input
+                id="valorResidual"
+                name="valorResidual"
+                label="Valor Residual (R$)"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ex: 0.00"
+                defaultValue={equipment?.valorResidual?.toString() || ""}
+              />
+            </>
+          ) : (
+            <div className="sm:col-span-2 rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-500">
+              Controle de depreciacao disponivel no plano Enterprise.
+            </div>
+          )}
         </div>
       </div>
 

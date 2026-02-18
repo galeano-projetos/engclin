@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getTenantId } from "@/lib/tenant";
 import { checkPermission } from "@/lib/auth/require-role";
 import { planAllows } from "@/lib/auth/plan-features";
+import { computeDepreciation } from "@/lib/depreciation";
 
 export interface ReportRow {
   [key: string]: string | number | null;
@@ -263,6 +264,80 @@ export async function getTicketIndicatorsReport(): Promise<ReportData> {
       { key: "reincidence", label: "Reincidência" },
     ],
     rows,
+  };
+}
+
+// =============================================
+// 5. Depreciação de Ativos
+// =============================================
+export async function getDepreciationReport(): Promise<ReportData> {
+  const { plan } = await checkPermission("report.view");
+  if (!planAllows(plan, "report.depreciacao")) {
+    throw new Error("Relatório não disponível no seu plano.");
+  }
+  const tenantId = await getTenantId();
+
+  const equipments = await prisma.equipment.findMany({
+    where: { tenantId, status: { not: "DESCARTADO" } },
+    orderBy: { name: "asc" },
+  });
+
+  let totalAcquisition = 0;
+  let totalBookValue = 0;
+  let totalDepreciation = 0;
+
+  const dataRows: ReportRow[] = equipments
+    .filter((e) => e.acquisitionValue && e.acquisitionDate)
+    .map((e) => {
+      const result = computeDepreciation({
+        acquisitionValue: Number(e.acquisitionValue),
+        acquisitionDate: e.acquisitionDate!,
+        vidaUtilAnos: e.vidaUtilAnos ?? 10,
+        metodoDepreciacao: e.metodoDepreciacao,
+        valorResidual: e.valorResidual ? Number(e.valorResidual) : 0,
+      });
+
+      totalAcquisition += Number(e.acquisitionValue);
+      totalBookValue += result.bookValue;
+      totalDepreciation += result.accumulatedDepreciation;
+
+      return {
+        name: e.name,
+        patrimony: e.patrimony,
+        acquisitionValue: round2(Number(e.acquisitionValue)),
+        acquisitionDate: e.acquisitionDate!.toLocaleDateString("pt-BR"),
+        accumulatedDepreciation: result.accumulatedDepreciation,
+        bookValue: result.bookValue,
+        percentDepreciated: `${result.percentDepreciated.toFixed(1)}%`,
+      };
+    });
+
+  // Linha de totais
+  dataRows.push({
+    name: "TOTAL",
+    patrimony: null,
+    acquisitionValue: round2(totalAcquisition),
+    acquisitionDate: null,
+    accumulatedDepreciation: round2(totalDepreciation),
+    bookValue: round2(totalBookValue),
+    percentDepreciated:
+      totalAcquisition > 0
+        ? `${((totalDepreciation / totalAcquisition) * 100).toFixed(1)}%`
+        : "—",
+  });
+
+  return {
+    title: "Depreciação de Ativos",
+    columns: [
+      { key: "name", label: "Equipamento" },
+      { key: "patrimony", label: "Patrimônio" },
+      { key: "acquisitionValue", label: "Valor Aquisição (R$)" },
+      { key: "acquisitionDate", label: "Data Aquisição" },
+      { key: "accumulatedDepreciation", label: "Depreciação Acumulada (R$)" },
+      { key: "bookValue", label: "Valor Contábil (R$)" },
+      { key: "percentDepreciated", label: "% Depreciado" },
+    ],
+    rows: dataRows,
   };
 }
 
