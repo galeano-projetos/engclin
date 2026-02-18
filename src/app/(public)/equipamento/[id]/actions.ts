@@ -1,0 +1,69 @@
+"use server";
+
+import { prisma } from "@/lib/db";
+import { createServiceOrderInTx } from "@/lib/service-order";
+
+export async function reportPublicProblem(formData: FormData) {
+  const equipmentId = formData.get("equipmentId") as string;
+  const reporterName = (formData.get("reporterName") as string)?.trim();
+  const description = (formData.get("description") as string)?.trim();
+  const phone = (formData.get("phone") as string)?.trim() || "";
+
+  if (!equipmentId || !reporterName || !description) {
+    return { error: "Nome e descrição do problema são obrigatórios." };
+  }
+
+  if (reporterName.length < 2) {
+    return { error: "Informe seu nome completo." };
+  }
+
+  if (description.length < 10) {
+    return { error: "Descreva o problema com mais detalhes (mínimo 10 caracteres)." };
+  }
+
+  const equipment = await prisma.equipment.findUnique({
+    where: { id: equipmentId },
+    select: { id: true, tenantId: true, status: true },
+  });
+
+  if (!equipment) {
+    return { error: "Equipamento não encontrado." };
+  }
+
+  // Find the tenant's MASTER user to use as openedById (required by schema)
+  const masterUser = await prisma.user.findFirst({
+    where: { tenantId: equipment.tenantId, role: "MASTER", active: true },
+    select: { id: true },
+  });
+
+  if (!masterUser) {
+    return { error: "Não foi possível registrar o problema. Contate a equipe técnica." };
+  }
+
+  const contactInfo = phone ? `${reporterName} (${phone})` : reporterName;
+  const fullDescription = `[Reporte Público] ${contactInfo}\n\n${description}`;
+
+  await prisma.$transaction(async (tx) => {
+    const ticket = await tx.correctiveMaintenance.create({
+      data: {
+        tenantId: equipment.tenantId,
+        equipmentId: equipment.id,
+        openedById: masterUser.id,
+        description: fullDescription,
+        urgency: "MEDIA",
+        status: "ABERTO",
+      },
+    });
+
+    await tx.equipment.update({
+      where: { id: equipment.id },
+      data: { status: "EM_MANUTENCAO" },
+    });
+
+    await createServiceOrderInTx(tx, equipment.tenantId, {
+      correctiveMaintenanceId: ticket.id,
+    });
+  });
+
+  return { success: true };
+}

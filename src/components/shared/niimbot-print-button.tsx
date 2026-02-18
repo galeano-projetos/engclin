@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 
 interface NiimbotPrintButtonProps {
   equipmentName: string;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
   patrimony: string | null;
   unitName: string;
   qrDataUrl: string | null;
@@ -14,6 +17,9 @@ type PrintStatus = "idle" | "connecting" | "printing" | "done" | "error";
 
 export function NiimbotPrintButton({
   equipmentName,
+  brand,
+  model,
+  serialNumber,
   patrimony,
   unitName,
   qrDataUrl,
@@ -61,39 +67,59 @@ export function NiimbotPrintButton({
       // Load QR image
       const qrImg = await loadImage(qrDataUrl);
 
-      // Draw QR on left side (180x180, centered vertically)
-      const qrSize = 180;
+      // Draw QR on left side (160x160, centered vertically)
+      const qrSize = 160;
       const qrY = (canvas.height - qrSize) / 2;
-      ctx.drawImage(qrImg, 10, qrY, qrSize, qrSize);
+      ctx.drawImage(qrImg, 8, qrY, qrSize, qrSize);
 
       // Draw text on right side
+      const textX = 178;
+      const maxTextW = 212;
       ctx.fillStyle = "#000000";
 
       // Equipment name (bold, max 2 lines)
-      ctx.font = "bold 22px Arial, sans-serif";
-      const nameLines = wrapText(ctx, equipmentName, 185);
-      let textY = 40;
+      ctx.font = "bold 18px Arial, sans-serif";
+      const nameLines = wrapText(ctx, equipmentName, maxTextW);
+      let textY = 30;
       for (const line of nameLines.slice(0, 2)) {
-        ctx.fillText(line, 200, textY);
-        textY += 28;
+        ctx.fillText(line, textX, textY);
+        textY += 22;
+      }
+
+      // Brand / Model
+      const brandModel = [brand, model].filter(Boolean).join(" ");
+      if (brandModel) {
+        ctx.font = "14px Arial, sans-serif";
+        textY += 4;
+        const bmLines = wrapText(ctx, brandModel, maxTextW);
+        ctx.fillText(bmLines[0], textX, textY);
+        textY += 18;
+      }
+
+      // Serial Number
+      if (serialNumber) {
+        ctx.font = "13px Arial, sans-serif";
+        textY += 2;
+        ctx.fillText(`S/N: ${serialNumber}`, textX, textY);
+        textY += 18;
       }
 
       // Patrimony
       if (patrimony) {
-        ctx.font = "18px Arial, sans-serif";
-        textY += 10;
-        ctx.fillText(patrimony, 200, textY);
-        textY += 24;
+        ctx.font = "14px Arial, sans-serif";
+        textY += 2;
+        ctx.fillText(`Pat: ${patrimony}`, textX, textY);
+        textY += 18;
       }
 
       // Unit name
-      ctx.font = "16px Arial, sans-serif";
+      ctx.font = "12px Arial, sans-serif";
       ctx.fillStyle = "#555555";
-      textY += patrimony ? 4 : 14;
-      const unitLines = wrapText(ctx, unitName, 185);
+      textY += 4;
+      const unitLines = wrapText(ctx, unitName, maxTextW);
       for (const line of unitLines.slice(0, 2)) {
-        ctx.fillText(line, 200, textY);
-        textY += 22;
+        ctx.fillText(line, textX, textY);
+        textY += 16;
       }
 
       // Encode and print

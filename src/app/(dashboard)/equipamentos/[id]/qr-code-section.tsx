@@ -7,6 +7,9 @@ import { NiimbotPrintButton } from "@/components/shared/niimbot-print-button";
 interface QrCodeSectionProps {
   equipmentId: string;
   equipmentName: string;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
   patrimony: string | null;
   unitName: string;
 }
@@ -14,6 +17,9 @@ interface QrCodeSectionProps {
 export function QrCodeSection({
   equipmentId,
   equipmentName,
+  brand,
+  model,
+  serialNumber,
   patrimony,
   unitName,
 }: QrCodeSectionProps) {
@@ -49,6 +55,8 @@ export function QrCodeSection({
     const printWindow = window.open("", "_blank", "width=400,height=500");
     if (!printWindow) return;
 
+    const brandModel = [brand, model].filter(Boolean).join(" ");
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -70,18 +78,22 @@ export function QrCodeSection({
             text-align: center;
           }
           .label img {
-            width: 40mm;
-            height: 40mm;
+            width: 35mm;
+            height: 35mm;
           }
           .label h1 {
             font-size: 10pt;
             margin-top: 2mm;
             line-height: 1.2;
           }
-          .label p {
-            font-size: 8pt;
-            color: #555;
+          .label .info {
+            font-size: 7pt;
+            color: #333;
             margin-top: 1mm;
+            line-height: 1.3;
+          }
+          .label .info strong {
+            font-size: 7pt;
           }
           @media print {
             body { min-height: auto; }
@@ -93,8 +105,10 @@ export function QrCodeSection({
         <div class="label">
           <img src="${qrDataUrl}" alt="QR Code" />
           <h1>${equipmentName}</h1>
-          ${patrimony ? `<p>${patrimony}</p>` : ""}
-          <p>${unitName}</p>
+          ${brandModel ? `<p class="info">${brandModel}</p>` : ""}
+          ${serialNumber ? `<p class="info"><strong>S/N:</strong> ${serialNumber}</p>` : ""}
+          ${patrimony ? `<p class="info"><strong>Pat:</strong> ${patrimony}</p>` : ""}
+          <p class="info" style="color:#555; margin-top:2mm;">${unitName}</p>
         </div>
         <script>window.onload = function() { window.print(); }</script>
       </body>
@@ -166,6 +180,9 @@ export function QrCodeSection({
                 <Button onClick={handlePrint}>Imprimir Etiqueta</Button>
                 <NiimbotPrintButton
                   equipmentName={equipmentName}
+                  brand={brand}
+                  model={model}
+                  serialNumber={serialNumber}
                   patrimony={patrimony}
                   unitName={unitName}
                   qrDataUrl={qrDataUrl}

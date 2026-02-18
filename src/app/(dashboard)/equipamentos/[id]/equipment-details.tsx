@@ -247,6 +247,9 @@ export function EquipmentDetails({
         <QrCodeSection
           equipmentId={equipment.id}
           equipmentName={equipment.name}
+          brand={equipment.brand}
+          model={equipment.model}
+          serialNumber={equipment.serialNumber}
           patrimony={equipment.patrimony}
           unitName={equipment.unitName}
         />
