@@ -18,6 +18,7 @@ import {
   CalibrationStatusChart,
 } from "./dashboard-charts";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
+import { computeGlobalMtbfMttr, formatHours } from "@/lib/mtbf-mttr";
 
 interface PageProps {
   searchParams: Promise<{ upgrade?: string }>;
@@ -42,6 +43,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     chartTicketsByUrg,
     chartCalibStatus,
     serviceTypeStats,
+    allClosedTickets,
   ] = await Promise.all([
     prisma.equipment.count({
       where: { tenantId },
@@ -95,9 +97,22 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     getTicketsByUrgency(),
     getCalibrationStatus(),
     getServiceTypeStatus(),
+    prisma.correctiveMaintenance.findMany({
+      where: { tenantId, closedAt: { not: null } },
+      select: { equipmentId: true, openedAt: true, closedAt: true },
+      orderBy: [{ equipmentId: "asc" }, { openedAt: "asc" }],
+    }),
   ]);
 
   // overdueCount is already a number from count()
+
+  const globalMtbfMttr = computeGlobalMtbfMttr(
+    allClosedTickets.map((t) => ({
+      equipmentId: t.equipmentId,
+      openedAt: t.openedAt,
+      closedAt: t.closedAt!,
+    }))
+  );
 
   const stats = [
     {
@@ -169,6 +184,42 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Indicadores de Confiabilidade */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-lg border bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
+            <p className="text-sm font-medium text-gray-500">
+              MTTR — Tempo Medio de Reparo
+            </p>
+          </div>
+          <p className="mt-3 text-3xl font-bold text-gray-900">
+            {formatHours(globalMtbfMttr.mttr)}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {globalMtbfMttr.totalTickets > 0
+              ? `Baseado em ${globalMtbfMttr.totalTickets} chamado${globalMtbfMttr.totalTickets !== 1 ? "s" : ""}`
+              : "Sem dados de chamados corretivos"}
+          </p>
+        </div>
+        <div className="rounded-lg border bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
+            <p className="text-sm font-medium text-gray-500">
+              MTBF — Tempo Medio Entre Falhas
+            </p>
+          </div>
+          <p className="mt-3 text-3xl font-bold text-gray-900">
+            {formatHours(globalMtbfMttr.mtbf)}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            {globalMtbfMttr.mtbf !== null
+              ? "Media global do parque tecnologico"
+              : "Necessario 2+ chamados por equipamento"}
+          </p>
+        </div>
       </div>
 
       {/* Service type breakdown */}

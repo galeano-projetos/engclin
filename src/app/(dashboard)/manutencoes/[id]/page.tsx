@@ -14,8 +14,31 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
   const maintenance = await prisma.preventiveMaintenance.findFirst({
     where: { id, tenantId },
     include: {
-      equipment: { select: { name: true, patrimony: true, id: true } },
+      equipment: {
+        select: {
+          name: true,
+          patrimony: true,
+          id: true,
+          equipmentType: {
+            select: {
+              checklistTemplates: {
+                where: { active: true },
+                include: { items: { orderBy: { order: "asc" } } },
+              },
+            },
+          },
+        },
+      },
       providerRef: { select: { name: true } },
+      checklistResults: {
+        include: {
+          template: { select: { name: true } },
+          items: {
+            include: { item: { select: { description: true } } },
+            orderBy: { item: { order: "asc" } },
+          },
+        },
+      },
     },
   });
 
@@ -28,6 +51,25 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
   if (maintenance.status === "AGENDADA" && maintenance.dueDate < now) {
     displayStatus = "VENCIDA";
   }
+
+  const checklistTemplates = (
+    maintenance.equipment.equipmentType?.checklistTemplates ?? []
+  ).map((t) => ({
+    id: t.id,
+    name: t.name,
+    items: t.items.map((i) => ({ id: i.id, description: i.description, order: i.order })),
+  }));
+
+  const checklistResults = maintenance.checklistResults.map((r) => ({
+    id: r.id,
+    templateName: r.template.name,
+    completedAt: r.completedAt.toISOString(),
+    items: r.items.map((ri) => ({
+      description: ri.item.description,
+      status: ri.status,
+      observation: ri.observation,
+    })),
+  }));
 
   return (
     <PreventiveDetails
@@ -49,6 +91,8 @@ export default async function PreventiveDetailPage({ params }: PageProps) {
         equipmentId: maintenance.equipment.id,
         equipmentPatrimony: maintenance.equipment.patrimony,
       }}
+      checklistTemplates={checklistTemplates}
+      checklistResults={checklistResults}
     />
   );
 }

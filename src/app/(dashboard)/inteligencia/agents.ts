@@ -32,6 +32,20 @@ export interface PredictiveInsight {
   affectedEquipments: { id: string; name: string; patrimony: string | null }[];
 }
 
+export interface PredictiveAlertInsight {
+  equipmentId: string;
+  equipmentName: string;
+  patrimony: string | null;
+  unitName: string;
+  brand: string;
+  model: string;
+  modelMtbfHours: number;
+  hoursSinceLastRepair: number;
+  percentOfMtbf: number;
+  riskLevel: "above" | "approaching";
+  alertMessage: string;
+}
+
 export interface PrioritizationInsight {
   ticketId: string;
   equipmentName: string;
@@ -250,6 +264,114 @@ function extractCommonIssues(descriptions: string[]): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([term]) => term);
+}
+
+// ============================================================
+// Agente 4: Análise Preditiva (MTBF)
+// ============================================================
+
+const MS_TO_HOURS = 1000 * 60 * 60;
+
+export async function runPredictiveAlertAgent(): Promise<PredictiveAlertInsight[]> {
+  const { tenantId } = await checkPermission("ai.view");
+
+  const equipments = await prisma.equipment.findMany({
+    where: {
+      tenantId,
+      status: { not: "DESCARTADO" },
+      model: { not: null },
+    },
+    include: {
+      unit: { select: { name: true } },
+      correctiveMaintenances: {
+        where: { closedAt: { not: null } },
+        select: { openedAt: true, closedAt: true },
+        orderBy: { openedAt: "asc" },
+      },
+    },
+  });
+
+  // Group by brand+model
+  const groups = new Map<
+    string,
+    {
+      brand: string;
+      model: string;
+      equipments: typeof equipments;
+    }
+  >();
+
+  for (const eq of equipments) {
+    const key = `${eq.brand || "N/A"}|||${eq.model || "N/A"}`;
+    if (!groups.has(key)) {
+      groups.set(key, { brand: eq.brand || "N/A", model: eq.model || "N/A", equipments: [] });
+    }
+    groups.get(key)!.equipments.push(eq);
+  }
+
+  const now = new Date();
+  const alerts: PredictiveAlertInsight[] = [];
+
+  for (const [, group] of groups) {
+    // Calculate model MTBF: flatten all inter-failure intervals across all equipment
+    const allIntervals: number[] = [];
+
+    for (const eq of group.equipments) {
+      const tickets = eq.correctiveMaintenances;
+      for (let i = 0; i < tickets.length - 1; i++) {
+        const gap =
+          (tickets[i + 1].openedAt.getTime() - tickets[i].closedAt!.getTime()) / MS_TO_HOURS;
+        if (gap > 0) allIntervals.push(gap);
+      }
+    }
+
+    // Need at least 2 intervals for a meaningful MTBF
+    if (allIntervals.length < 2) continue;
+
+    const modelMtbf = allIntervals.reduce((a, b) => a + b, 0) / allIntervals.length;
+
+    // For each equipment in the group, check if approaching MTBF
+    for (const eq of group.equipments) {
+      const tickets = eq.correctiveMaintenances;
+      if (tickets.length === 0) continue;
+
+      // Time since last repair
+      const lastClosedAt = tickets[tickets.length - 1].closedAt!;
+      const hoursSinceLastRepair = (now.getTime() - lastClosedAt.getTime()) / MS_TO_HOURS;
+      const percentOfMtbf = (hoursSinceLastRepair / modelMtbf) * 100;
+
+      if (percentOfMtbf < 70) continue;
+
+      const riskLevel: "above" | "approaching" = percentOfMtbf >= 100 ? "above" : "approaching";
+
+      const alertMessage =
+        riskLevel === "above"
+          ? `Atenção: Este equipamento ultrapassou o tempo médio entre falhas (MTBF) para o modelo ${group.brand} ${group.model}. Considere uma preventiva imediata.`
+          : `Atenção: Este equipamento está se aproximando do tempo médio de falha para o modelo ${group.brand} ${group.model}. Considere uma preventiva antecipada.`;
+
+      alerts.push({
+        equipmentId: eq.id,
+        equipmentName: eq.name,
+        patrimony: eq.patrimony,
+        unitName: eq.unit.name,
+        brand: group.brand,
+        model: group.model,
+        modelMtbfHours: Math.round(modelMtbf),
+        hoursSinceLastRepair: Math.round(hoursSinceLastRepair),
+        percentOfMtbf: Math.round(percentOfMtbf),
+        riskLevel,
+        alertMessage,
+      });
+    }
+  }
+
+  // Sort: "above" first, then "approaching", within each by percentOfMtbf desc
+  const riskOrder = { above: 0, approaching: 1 };
+  alerts.sort(
+    (a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel] || b.percentOfMtbf - a.percentOfMtbf
+  );
+
+  return alerts;
 }
 
 // ============================================================

@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import { EquipmentDetails } from "./equipment-details";
 import { ServiceStatusSummary } from "./service-status-summary";
 import { PhysicsTestStatusSummary } from "./physics-test-status-summary";
+import { MtbfMttrSummary } from "./mtbf-mttr-summary";
+import { computeEquipmentMtbfMttr } from "@/lib/mtbf-mttr";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -44,7 +46,7 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [units, equipmentTypes] = await Promise.all([
+  const [units, equipmentTypes, closedTickets] = await Promise.all([
     prisma.unit.findMany({
       where: { tenantId },
       orderBy: { name: "asc" },
@@ -54,7 +56,20 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
       select: { id: true, name: true, defaultCriticality: true },
       orderBy: { name: "asc" },
     }),
+    prisma.correctiveMaintenance.findMany({
+      where: { equipmentId: id, tenantId, closedAt: { not: null } },
+      select: { equipmentId: true, openedAt: true, closedAt: true },
+      orderBy: { openedAt: "asc" },
+    }),
   ]);
+
+  const mtbfMttr = computeEquipmentMtbfMttr(
+    closedTickets.map((t) => ({
+      equipmentId: t.equipmentId,
+      openedAt: t.openedAt,
+      closedAt: t.closedAt!,
+    }))
+  );
 
   // Build physics test status for each test type
   const now = new Date();
@@ -196,6 +211,11 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
         showQrCode={showQrCode}
       />
       <ServiceStatusSummary services={services} />
+      <MtbfMttrSummary
+        mtbf={mtbfMttr.mtbf}
+        mttr={mtbfMttr.mttr}
+        ticketCount={mtbfMttr.ticketCount}
+      />
       {showPhysics && hasPhysicsTests && <PhysicsTestStatusSummary tests={physicsTests} />}
     </>
   );

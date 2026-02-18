@@ -34,6 +34,12 @@ const planRestrictions: Record<string, Plan[]> = {
   "provider.edit": ["PROFISSIONAL", "ENTERPRISE"],
   "provider.delete": ["PROFISSIONAL", "ENTERPRISE"],
 
+  // Checklists Digitais (PROFISSIONAL+)
+  "checklist.view": ["PROFISSIONAL", "ENTERPRISE"],
+  "checklist.create": ["PROFISSIONAL", "ENTERPRISE"],
+  "checklist.edit": ["PROFISSIONAL", "ENTERPRISE"],
+  "checklist.delete": ["PROFISSIONAL", "ENTERPRISE"],
+
   // Contratos (PROFISSIONAL+)
   "contract.view": ["PROFISSIONAL", "ENTERPRISE"],
   "contract.create": ["PROFISSIONAL", "ENTERPRISE"],

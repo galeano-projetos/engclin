@@ -60,6 +60,12 @@ const permissions: Record<string, UserRole[]> = {
   "os.view": ["MASTER", "TECNICO", "COORDENADOR", "FISCAL"],
   "os.manage": ["MASTER", "TECNICO"],
 
+  // Checklists
+  "checklist.view": ["MASTER", "TECNICO"],
+  "checklist.create": ["MASTER"],
+  "checklist.edit": ["MASTER"],
+  "checklist.delete": ["MASTER"],
+
   // Contratos
   "contract.view": ["MASTER", "TECNICO"],
   "contract.create": ["MASTER"],

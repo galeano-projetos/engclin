@@ -8,14 +8,17 @@ import {
   runCostBenefitAgent,
   runPredictiveAgent,
   runPrioritizationAgent,
+  runPredictiveAlertAgent,
 } from "./agents";
 import type {
   CostBenefitInsight,
   PredictiveInsight,
   PrioritizationInsight,
+  PredictiveAlertInsight,
 } from "./agents";
+import { formatHours } from "@/lib/mtbf-mttr";
 
-type ActiveAgent = "cost" | "predictive" | "priority" | null;
+type ActiveAgent = "cost" | "predictive" | "priority" | "predictive-alert" | null;
 
 export function IntelligencePanel() {
   const [activeAgent, setActiveAgent] = useState<ActiveAgent>(null);
@@ -24,6 +27,7 @@ export function IntelligencePanel() {
   const [costData, setCostData] = useState<CostBenefitInsight[] | null>(null);
   const [predictiveData, setPredictiveData] = useState<PredictiveInsight[] | null>(null);
   const [priorityData, setPriorityData] = useState<PrioritizationInsight[] | null>(null);
+  const [alertData, setAlertData] = useState<PredictiveAlertInsight[] | null>(null);
 
   async function handleRunAgent(agent: ActiveAgent) {
     if (!agent) return;
@@ -40,6 +44,9 @@ export function IntelligencePanel() {
       } else if (agent === "priority") {
         const data = await runPrioritizationAgent();
         setPriorityData(data);
+      } else if (agent === "predictive-alert") {
+        const data = await runPredictiveAlertAgent();
+        setAlertData(data);
       }
     } catch {
       // Error handled silently - agent results are shown as empty
@@ -51,7 +58,7 @@ export function IntelligencePanel() {
   return (
     <div className="mt-6 space-y-6">
       {/* Cards dos agentes */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <AgentCard
           title="Custo-Benefício"
           description="Analisa custos acumulados de manutenção vs. valor de aquisição e recomenda substituição quando necessário."
@@ -88,6 +95,18 @@ export function IntelligencePanel() {
           loading={loading && activeAgent === "priority"}
           onRun={() => handleRunAgent("priority")}
         />
+        <AgentCard
+          title="Análise Preditiva"
+          description="Identifica equipamentos se aproximando do tempo médio entre falhas (MTBF) do seu modelo."
+          icon={
+            <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          }
+          active={activeAgent === "predictive-alert"}
+          loading={loading && activeAgent === "predictive-alert"}
+          onRun={() => handleRunAgent("predictive-alert")}
+        />
       </div>
 
       {/* Resultados */}
@@ -99,6 +118,9 @@ export function IntelligencePanel() {
       )}
       {activeAgent === "priority" && priorityData && !loading && (
         <PrioritizationResults data={priorityData} />
+      )}
+      {activeAgent === "predictive-alert" && alertData && !loading && (
+        <PredictiveAlertResults data={alertData} />
       )}
     </div>
   );
@@ -451,6 +473,105 @@ function PrioritizationResults({ data }: { data: PrioritizationInsight[] }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Resultados: Análise Preditiva (Alertas MTBF)
+// ============================================================
+
+function PredictiveAlertResults({ data }: { data: PredictiveAlertInsight[] }) {
+  if (data.length === 0) {
+    return (
+      <EmptyResults message="Nenhum equipamento se aproximando do MTBF do seu modelo. Dados insuficientes ou todos os equipamentos estão dentro da faixa segura." />
+    );
+  }
+
+  const above = data.filter((d) => d.riskLevel === "above");
+  const approaching = data.filter((d) => d.riskLevel === "approaching");
+
+  return (
+    <div className="rounded-lg border bg-white shadow-sm">
+      <div className="border-b px-6 py-4">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Análise Preditiva — Alertas MTBF
+        </h2>
+        <p className="text-sm text-gray-500">
+          {data.length} equipamento{data.length !== 1 ? "s" : ""} se aproximando
+          do MTBF —{" "}
+          <span className="font-medium text-red-600">
+            {above.length} acima do MTBF
+          </span>
+          ,{" "}
+          <span className="font-medium text-yellow-600">
+            {approaching.length} aproximando
+          </span>
+        </p>
+      </div>
+
+      <div className="divide-y">
+        {data.map((item) => (
+          <PredictiveAlertCard key={item.equipmentId} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PredictiveAlertCard({ item }: { item: PredictiveAlertInsight }) {
+  const barWidthPercent = Math.min(item.percentOfMtbf, 100);
+  const barColor =
+    item.riskLevel === "above" ? "bg-red-500" : "bg-yellow-500";
+
+  return (
+    <div className="px-6 py-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <Link
+            href={`/equipamentos/${item.equipmentId}`}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            {item.equipmentName}
+          </Link>
+          <p className="text-xs text-gray-500">
+            {item.unitName}
+            {item.patrimony && ` — Pat: ${item.patrimony}`}
+          </p>
+        </div>
+        <Badge variant={item.riskLevel === "above" ? "danger" : "warning"}>
+          {item.riskLevel === "above" ? "Acima do MTBF" : "Aproximando"}
+        </Badge>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mt-3">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{Math.round(item.percentOfMtbf)}% do MTBF</span>
+          <span>MTBF: {formatHours(item.modelMtbfHours)}</span>
+        </div>
+        <div className="mt-1 h-2 w-full rounded-full bg-gray-200">
+          <div
+            className={`h-2 rounded-full ${barColor} transition-all`}
+            style={{ width: `${barWidthPercent}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span className="text-gray-500">Modelo:</span>{" "}
+          <span className="font-medium">{item.brand} {item.model}</span>
+        </div>
+        <div>
+          <span className="text-gray-500">Desde último reparo:</span>{" "}
+          <span className="font-medium">{formatHours(item.hoursSinceLastRepair)}</span>
+        </div>
+      </div>
+
+      <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+        {item.alertMessage}
+      </p>
     </div>
   );
 }

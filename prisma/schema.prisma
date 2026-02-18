@@ -26,7 +26,9 @@ model Tenant {
   providers      Provider[]
   equipmentTypes EquipmentType[]
   contracts      Contract[]
-  serviceOrders  ServiceOrder[]
+  serviceOrders      ServiceOrder[]
+  checklistTemplates ChecklistTemplate[]
+  checklistResults   ChecklistResult[]
 
   @@map("tenants")
 }
@@ -159,7 +161,8 @@ model EquipmentType {
   defaultCalibracaoProviderId String?
   defaultTseProviderId        String?
 
-  equipments Equipment[]
+  equipments         Equipment[]
+  checklistTemplates ChecklistTemplate[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -267,9 +270,10 @@ model PreventiveMaintenance {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  equipment     Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  providerRef   Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  serviceOrder  ServiceOrder?
+  equipment        Equipment         @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  providerRef      Provider?         @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  serviceOrder     ServiceOrder?
+  checklistResults ChecklistResult[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -438,4 +442,79 @@ enum OrderStatus {
   ABERTA
   EM_EXECUCAO
   CONCLUIDA
+}
+
+// ============================================================
+// CHECKLIST TEMPLATE (Template de checklist para manutencao preventiva)
+// ============================================================
+model ChecklistTemplate {
+  id              String   @id @default(cuid())
+  tenantId        String
+  equipmentTypeId String
+  name            String
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  equipmentType EquipmentType @relation(fields: [equipmentTypeId], references: [id], onDelete: Cascade)
+  items         ChecklistItem[]
+  results       ChecklistResult[]
+
+  @@index([tenantId])
+  @@index([equipmentTypeId])
+  @@map("checklist_templates")
+}
+
+model ChecklistItem {
+  id          String @id @default(cuid())
+  templateId  String
+  description String
+  order       Int    @default(0)
+
+  template    ChecklistTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  resultItems ChecklistResultItem[]
+
+  @@index([templateId])
+  @@map("checklist_items")
+}
+
+// ============================================================
+// CHECKLIST RESULT (Resultado de checklist preenchido na execucao)
+// ============================================================
+model ChecklistResult {
+  id                      String   @id @default(cuid())
+  tenantId                String
+  preventiveMaintenanceId String
+  templateId              String
+  completedAt             DateTime @default(now())
+  completedById           String
+
+  tenant                Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  preventiveMaintenance PreventiveMaintenance @relation(fields: [preventiveMaintenanceId], references: [id], onDelete: Cascade)
+  template              ChecklistTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  items                 ChecklistResultItem[]
+
+  @@index([tenantId])
+  @@index([preventiveMaintenanceId])
+  @@map("checklist_results")
+}
+
+model ChecklistResultItem {
+  id          String              @id @default(cuid())
+  resultId    String
+  itemId      String
+  status      ChecklistItemStatus
+  observation String?
+
+  result ChecklistResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  item   ChecklistItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([resultId])
+  @@map("checklist_result_items")
+}
+
+enum ChecklistItemStatus {
+  CONFORME
+  NAO_CONFORME
 }

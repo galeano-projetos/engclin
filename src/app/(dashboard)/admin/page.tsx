@@ -7,6 +7,7 @@ import Link from "next/link";
 const allAdminLinks = [
   { href: "/admin/fornecedores", label: "Fornecedores", description: "Cadastro de empresas prestadoras de servicos", permission: "provider.view" },
   { href: "/admin/tipos-equipamento", label: "Tipos de Equipamento", description: "Periodicidades padrao por tipo", permission: "equipmentType.view" },
+  { href: "/admin/checklists", label: "Checklists", description: "Templates de checklist para manutencao preventiva", permission: "checklist.view" },
   { href: "/admin/contratos", label: "Contratos", description: "Contratos com fornecedores", permission: "contract.view" },
   { href: "/admin/importar", label: "Importar Dados", description: "Importacao via planilha Excel", permission: "import.execute" },
 ];

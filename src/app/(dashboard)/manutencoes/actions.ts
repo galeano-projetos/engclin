@@ -96,28 +96,44 @@ export async function createPreventive(formData: FormData) {
 }
 
 export async function executePreventive(id: string, formData: FormData) {
-  const { tenantId } = await checkPermission("preventive.execute");
+  const { tenantId, userId } = await checkPermission("preventive.execute");
 
   const executionDate = formData.get("executionDate") as string;
   const cost = formData.get("cost") as string;
   const certificateUrl = (formData.get("certificateUrl") as string) || undefined;
   const notes = (formData.get("notes") as string) || undefined;
+  const checklistTemplateId = (formData.get("checklistTemplateId") as string) || null;
 
   if (!executionDate) {
     return { error: "A data de execucao e obrigatoria." };
   }
 
-  // Get the current maintenance to read periodicity and create next
+  // Get the current maintenance with checklist template info
   const current = await prisma.preventiveMaintenance.findFirst({
     where: { id, tenantId },
+    include: {
+      equipment: {
+        select: {
+          equipmentType: {
+            select: {
+              checklistTemplates: {
+                where: { active: true },
+                include: { items: true },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!current) {
     return { error: "Manutencao nao encontrada." };
   }
 
-  const operations = [
-    prisma.preventiveMaintenance.update({
+  await prisma.$transaction(async (tx) => {
+    // 1. Update current maintenance
+    await tx.preventiveMaintenance.update({
       where: { id, tenantId },
       data: {
         executionDate: new Date(executionDate),
@@ -126,17 +142,15 @@ export async function executePreventive(id: string, formData: FormData) {
         notes,
         status: "REALIZADA",
       },
-    }),
-  ];
+    });
 
-  // Auto-generate next maintenance
-  if (current.periodicityMonths > 0) {
-    const nextScheduledDate = new Date(executionDate);
-    nextScheduledDate.setMonth(nextScheduledDate.getMonth() + current.periodicityMonths);
-    const nextDueDate = new Date(nextScheduledDate);
+    // 2. Auto-generate next maintenance
+    if (current.periodicityMonths > 0) {
+      const nextScheduledDate = new Date(executionDate);
+      nextScheduledDate.setMonth(nextScheduledDate.getMonth() + current.periodicityMonths);
+      const nextDueDate = new Date(nextScheduledDate);
 
-    operations.push(
-      prisma.preventiveMaintenance.create({
+      await tx.preventiveMaintenance.create({
         data: {
           tenantId: current.tenantId,
           equipmentId: current.equipmentId,
@@ -149,11 +163,44 @@ export async function executePreventive(id: string, formData: FormData) {
           provider: current.provider,
           status: "AGENDADA",
         },
-      })
-    );
-  }
+      });
+    }
 
-  await prisma.$transaction(operations);
+    // 3. Save checklist result if present
+    if (checklistTemplateId) {
+      const templates = current.equipment?.equipmentType?.checklistTemplates ?? [];
+      const template = templates.find((t) => t.id === checklistTemplateId);
+
+      if (template && template.items.length > 0) {
+        const result = await tx.checklistResult.create({
+          data: {
+            tenantId,
+            preventiveMaintenanceId: id,
+            templateId: checklistTemplateId,
+            completedById: userId,
+          },
+        });
+
+        const resultItems = template.items
+          .map((item) => {
+            const status = formData.get(`checklist_${item.id}_status`) as string;
+            const observation = (formData.get(`checklist_${item.id}_obs`) as string) || null;
+            if (status !== "CONFORME" && status !== "NAO_CONFORME") return null;
+            return {
+              resultId: result.id,
+              itemId: item.id,
+              status: status as "CONFORME" | "NAO_CONFORME",
+              observation,
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null);
+
+        if (resultItems.length > 0) {
+          await tx.checklistResultItem.createMany({ data: resultItems });
+        }
+      }
+    }
+  });
 
   revalidatePath("/manutencoes");
   redirect("/manutencoes");

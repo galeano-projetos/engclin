@@ -27,6 +27,19 @@ interface MaintenanceData {
   equipmentPatrimony: string | null;
 }
 
+interface ChecklistTemplateData {
+  id: string;
+  name: string;
+  items: { id: string; description: string; order: number }[];
+}
+
+interface ChecklistResultData {
+  id: string;
+  templateName: string;
+  completedAt: string;
+  items: { description: string; status: string; observation: string | null }[];
+}
+
 const statusVariant: Record<string, "info" | "success" | "danger"> = {
   AGENDADA: "info",
   REALIZADA: "success",
@@ -60,12 +73,19 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function PreventiveDetails({
   maintenance,
+  checklistTemplates = [],
+  checklistResults = [],
 }: {
   maintenance: MaintenanceData;
+  checklistTemplates?: ChecklistTemplateData[];
+  checklistResults?: ChecklistResultData[];
 }) {
   const [showExecuteForm, setShowExecuteForm] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [checklistAnswers, setChecklistAnswers] = useState<
+    Record<string, { status: string; observation: string }>
+  >({});
 
   const canExecute =
     maintenance.status === "AGENDADA" || maintenance.displayStatus === "VENCIDA";
@@ -153,6 +173,66 @@ export function PreventiveDetails({
                 placeholder="Notas adicionais..."
               />
             </div>
+
+            {checklistTemplates.length > 0 && (
+              <div className="border-t pt-4">
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">
+                  Checklist de Verificacao
+                </h3>
+                {checklistTemplates.map((template) => (
+                  <div key={template.id} className="mb-4">
+                    <p className="mb-2 text-sm font-medium text-gray-600">
+                      {template.name}
+                    </p>
+                    <input type="hidden" name="checklistTemplateId" value={template.id} />
+                    <div className="space-y-2">
+                      {template.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded border bg-white p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex-1 text-sm text-gray-700">
+                              {item.description}
+                            </span>
+                            <select
+                              name={`checklist_${item.id}_status`}
+                              required
+                              className="rounded border px-2 py-1 text-sm"
+                              defaultValue=""
+                              onChange={(e) =>
+                                setChecklistAnswers((prev) => ({
+                                  ...prev,
+                                  [item.id]: {
+                                    status: e.target.value,
+                                    observation: prev[item.id]?.observation || "",
+                                  },
+                                }))
+                              }
+                            >
+                              <option value="" disabled>
+                                --
+                              </option>
+                              <option value="CONFORME">Conforme</option>
+                              <option value="NAO_CONFORME">Nao Conforme</option>
+                            </select>
+                          </div>
+                          {checklistAnswers[item.id]?.status === "NAO_CONFORME" && (
+                            <input
+                              type="text"
+                              name={`checklist_${item.id}_obs`}
+                              placeholder="Observacao..."
+                              className="mt-2 w-full rounded border px-2 py-1 text-sm"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button type="submit" loading={executing}>
                 Confirmar Execucao
@@ -259,6 +339,52 @@ export function PreventiveDetails({
           )}
         </dl>
       </div>
+
+      {checklistResults.length > 0 && (
+        <div className="mt-6 rounded-lg border bg-white shadow-sm">
+          <div className="border-b px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Checklist de Verificacao
+            </h2>
+          </div>
+          {checklistResults.map((result) => (
+            <div key={result.id} className="px-6 py-4">
+              <p className="mb-2 text-sm font-medium text-gray-700">
+                {result.templateName}
+                <span className="ml-2 text-xs text-gray-400">
+                  Preenchido em{" "}
+                  {new Date(result.completedAt).toLocaleDateString("pt-BR")}
+                </span>
+              </p>
+              <div className="space-y-1">
+                {result.items.map((ri, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-wrap items-center gap-2 py-1 text-sm"
+                  >
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${
+                        ri.status === "CONFORME" ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
+                    <span className="text-gray-700">{ri.description}</span>
+                    <Badge
+                      variant={ri.status === "CONFORME" ? "success" : "danger"}
+                    >
+                      {ri.status === "CONFORME" ? "Conforme" : "Nao Conforme"}
+                    </Badge>
+                    {ri.observation && (
+                      <span className="text-xs italic text-gray-500">
+                        ({ri.observation})
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
