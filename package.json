@@ -6,7 +6,7 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "build": "next build",
-    "start": "prisma db push --skip-generate && next start",
+    "start": "prisma db push && next start",
     "lint": "eslint",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
