@@ -11,12 +11,26 @@ datasource db {
 // ============================================================
 model Tenant {
   id        String   @id @default(cuid())
-  name      String   // Nome do hospital/clinica
+  name      String   // Nome de exibicao (fantasia ou razao social)
   cnpj      String   @unique
   plan      Plan     @default(ESSENCIAL)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Dados do cartao CNPJ
+  razaoSocial        String?
+  nomeFantasia       String?
+  logradouro         String?
+  numero             String?
+  complemento        String?
+  bairro             String?
+  cidade             String?
+  uf                 String?
+  cep                String?
+  telefone           String?
+  email              String?
+  atividadePrincipal String?  // CNAE descricao
 
   lastOsNumber Int      @default(0)
 

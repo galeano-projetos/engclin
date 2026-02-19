@@ -23,7 +23,7 @@ const planOptions = [
 
 const roleLabels: Record<string, string> = {
   MASTER: "Master",
-  TECNICO: "Técnico",
+  TECNICO: "Tecnico",
   COORDENADOR: "Coordenador",
   FISCAL: "Fiscal",
 };
@@ -31,8 +31,26 @@ const roleLabels: Record<string, string> = {
 const roleOptions = [
   { value: "MASTER", label: "Master" },
   { value: "COORDENADOR", label: "Coordenador" },
-  { value: "TECNICO", label: "Técnico" },
+  { value: "TECNICO", label: "Tecnico" },
   { value: "FISCAL", label: "Fiscal" },
+];
+
+const UF_OPTIONS = [
+  { value: "", label: "Selecione" },
+  { value: "AC", label: "AC" }, { value: "AL", label: "AL" },
+  { value: "AP", label: "AP" }, { value: "AM", label: "AM" },
+  { value: "BA", label: "BA" }, { value: "CE", label: "CE" },
+  { value: "DF", label: "DF" }, { value: "ES", label: "ES" },
+  { value: "GO", label: "GO" }, { value: "MA", label: "MA" },
+  { value: "MT", label: "MT" }, { value: "MS", label: "MS" },
+  { value: "MG", label: "MG" }, { value: "PA", label: "PA" },
+  { value: "PB", label: "PB" }, { value: "PR", label: "PR" },
+  { value: "PE", label: "PE" }, { value: "PI", label: "PI" },
+  { value: "RJ", label: "RJ" }, { value: "RN", label: "RN" },
+  { value: "RS", label: "RS" }, { value: "RO", label: "RO" },
+  { value: "RR", label: "RR" }, { value: "SC", label: "SC" },
+  { value: "SP", label: "SP" }, { value: "SE", label: "SE" },
+  { value: "TO", label: "TO" },
 ];
 
 interface TenantData {
@@ -42,6 +60,18 @@ interface TenantData {
   plan: string;
   active: boolean;
   createdAt: Date;
+  razaoSocial: string | null;
+  nomeFantasia: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  cep: string | null;
+  telefone: string | null;
+  email: string | null;
+  atividadePrincipal: string | null;
   users: {
     id: string;
     name: string;
@@ -141,7 +171,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
     if (result.error) {
       setError(result.error);
     } else {
-      setSuccess("Usuário criado com sucesso");
+      setSuccess("Usuario criado com sucesso");
       setShowCreateUser(false);
       router.refresh();
     }
@@ -172,7 +202,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-gray-500">Usuários</p>
+          <p className="text-sm text-gray-500">Usuarios</p>
           <p className="text-2xl font-bold">{tenant.users.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
@@ -192,11 +222,42 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       </div>
 
       {/* Edit form */}
-      <form onSubmit={handleUpdate} className="space-y-4 rounded-lg border bg-white p-6">
+      <form onSubmit={handleUpdate} className="space-y-5 rounded-lg border bg-white p-6">
         <h2 className="text-lg font-semibold text-gray-900">Editar Dados</h2>
-        <Input name="name" label="Nome" required defaultValue={tenant.name} />
+
+        <Input name="name" label="Nome de Exibicao" required defaultValue={tenant.name} />
         <Input name="cnpj" label="CNPJ" required defaultValue={tenant.cnpj} />
         <Select name="plan" label="Plano" options={planOptions} defaultValue={tenant.plan} />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input name="razaoSocial" label="Razao Social" defaultValue={tenant.razaoSocial || ""} />
+          <Input name="nomeFantasia" label="Nome Fantasia" defaultValue={tenant.nomeFantasia || ""} />
+        </div>
+
+        <Input name="atividadePrincipal" label="Atividade Principal (CNAE)" defaultValue={tenant.atividadePrincipal || ""} />
+
+        <h3 className="text-sm font-semibold text-gray-700 pt-2">Endereco</h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="sm:col-span-2">
+            <Input name="logradouro" label="Logradouro" defaultValue={tenant.logradouro || ""} />
+          </div>
+          <Input name="numero" label="Numero" defaultValue={tenant.numero || ""} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input name="complemento" label="Complemento" defaultValue={tenant.complemento || ""} />
+          <Input name="bairro" label="Bairro" defaultValue={tenant.bairro || ""} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Input name="cidade" label="Cidade" defaultValue={tenant.cidade || ""} />
+          <Select name="uf" label="UF" options={UF_OPTIONS} defaultValue={tenant.uf || ""} />
+          <Input name="cep" label="CEP" defaultValue={tenant.cep || ""} />
+        </div>
+
+        <h3 className="text-sm font-semibold text-gray-700 pt-2">Contato da Empresa</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input name="telefone" label="Telefone" defaultValue={tenant.telefone || ""} />
+          <Input name="emailEmpresa" label="Email" type="email" defaultValue={tenant.email || ""} />
+        </div>
 
         <div className="flex gap-3">
           <Button type="submit" loading={loading}>
@@ -217,13 +278,13 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       <div className="rounded-lg border bg-white p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
-            Usuários do Tenant ({tenant.users.length})
+            Usuarios do Tenant ({tenant.users.length})
           </h2>
           <Button
             variant="secondary"
             onClick={() => setShowCreateUser(!showCreateUser)}
           >
-            {showCreateUser ? "Cancelar" : "Adicionar Usuário"}
+            {showCreateUser ? "Cancelar" : "Adicionar Usuario"}
           </Button>
         </div>
 
@@ -233,7 +294,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
             onSubmit={handleCreateUser}
             className="mb-4 space-y-3 rounded-lg border border-teal-200 bg-teal-50 p-4"
           >
-            <h3 className="text-sm font-semibold text-teal-800">Novo Usuário</h3>
+            <h3 className="text-sm font-semibold text-teal-800">Novo Usuario</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <Input name="name" label="Nome" required />
               <Input name="email" label="Email" type="email" required />
@@ -246,13 +307,13 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
               />
             </div>
             <Button type="submit" loading={creatingUser}>
-              Criar Usuário
+              Criar Usuario
             </Button>
           </form>
         )}
 
         {tenant.users.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum usuário.</p>
+          <p className="text-sm text-gray-500">Nenhum usuario.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -263,7 +324,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
                   <th className="pb-2 font-medium">Perfil</th>
                   <th className="pb-2 font-medium">Status</th>
                   <th className="pb-2 font-medium">Criado em</th>
-                  <th className="pb-2 font-medium text-right">Ações</th>
+                  <th className="pb-2 font-medium text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -307,7 +368,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
                           className={`rounded p-1.5 hover:bg-gray-100 disabled:opacity-50 ${
                             user.active ? "text-yellow-500 hover:text-yellow-600" : "text-green-500 hover:text-green-600"
                           }`}
-                          title={user.active ? "Desativar usuário" : "Ativar usuário"}
+                          title={user.active ? "Desativar usuario" : "Ativar usuario"}
                         >
                           {togglingUserId === user.id ? (
                             <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -338,7 +399,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       {resetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Senha Provisória</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Senha Provisoria</h3>
             <p className="mt-2 text-sm text-gray-600">
               Nova senha gerada para <strong>{resetModal.userName}</strong>:
             </p>

@@ -91,7 +91,7 @@ export async function createTenant(formData: FormData) {
   const masterEmail = (formData.get("masterEmail") as string)?.trim();
   const masterPassword = formData.get("masterPassword") as string;
 
-  if (!name) return { error: "Nome do hospital/clinica e obrigatorio" };
+  if (!name) return { error: "Nome da empresa e obrigatorio" };
 
   const cnpjResult = cnpjSchema.safeParse(cnpj);
   if (!cnpjResult.success) return { error: "CNPJ invalido" };
@@ -106,6 +106,20 @@ export async function createTenant(formData: FormData) {
 
   const passwordResult = passwordSchema.safeParse(masterPassword);
   if (!passwordResult.success) return { error: passwordResult.error.issues[0].message };
+
+  // Campos do cartao CNPJ (opcionais)
+  const razaoSocial = (formData.get("razaoSocial") as string)?.trim() || null;
+  const nomeFantasia = (formData.get("nomeFantasia") as string)?.trim() || null;
+  const logradouro = (formData.get("logradouro") as string)?.trim() || null;
+  const numero = (formData.get("numero") as string)?.trim() || null;
+  const complemento = (formData.get("complemento") as string)?.trim() || null;
+  const bairro = (formData.get("bairro") as string)?.trim() || null;
+  const cidade = (formData.get("cidade") as string)?.trim() || null;
+  const uf = (formData.get("uf") as string)?.trim() || null;
+  const cep = (formData.get("cep") as string)?.trim() || null;
+  const telefone = (formData.get("telefone") as string)?.trim() || null;
+  const emailEmpresa = (formData.get("emailEmpresa") as string)?.trim() || null;
+  const atividadePrincipal = (formData.get("atividadePrincipal") as string)?.trim() || null;
 
   // Normalize CNPJ to digits only for consistent comparison
   const normalizedCnpj = cnpj.replace(/\D/g, "");
@@ -127,6 +141,18 @@ export async function createTenant(formData: FormData) {
         name,
         cnpj: normalizedCnpj,
         plan: planResult.data,
+        razaoSocial,
+        nomeFantasia,
+        logradouro,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        uf,
+        cep,
+        telefone,
+        email: emailEmpresa,
+        atividadePrincipal,
       },
     });
 
@@ -206,6 +232,20 @@ export async function updateTenant(tenantId: string, formData: FormData) {
   const planResult = planSchema.safeParse(plan);
   if (!planResult.success) return { error: "Plano invalido" };
 
+  // Campos do cartao CNPJ (opcionais)
+  const razaoSocial = (formData.get("razaoSocial") as string)?.trim() || null;
+  const nomeFantasia = (formData.get("nomeFantasia") as string)?.trim() || null;
+  const logradouro = (formData.get("logradouro") as string)?.trim() || null;
+  const numero = (formData.get("numero") as string)?.trim() || null;
+  const complemento = (formData.get("complemento") as string)?.trim() || null;
+  const bairro = (formData.get("bairro") as string)?.trim() || null;
+  const cidade = (formData.get("cidade") as string)?.trim() || null;
+  const uf = (formData.get("uf") as string)?.trim() || null;
+  const cep = (formData.get("cep") as string)?.trim() || null;
+  const telefone = (formData.get("telefone") as string)?.trim() || null;
+  const emailEmpresa = (formData.get("emailEmpresa") as string)?.trim() || null;
+  const atividadePrincipal = (formData.get("atividadePrincipal") as string)?.trim() || null;
+
   // Normalize CNPJ to digits only
   const normalizedCnpj = cnpj.replace(/\D/g, "");
 
@@ -217,7 +257,23 @@ export async function updateTenant(tenantId: string, formData: FormData) {
 
   await prisma.tenant.update({
     where: { id: tenantId },
-    data: { name, cnpj: normalizedCnpj, plan: planResult.data },
+    data: {
+      name,
+      cnpj: normalizedCnpj,
+      plan: planResult.data,
+      razaoSocial,
+      nomeFantasia,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      cep,
+      telefone,
+      email: emailEmpresa,
+      atividadePrincipal,
+    },
   });
 
   revalidatePath(`/platform/tenants/${tenantId}`);

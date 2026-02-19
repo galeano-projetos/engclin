@@ -6,6 +6,7 @@ import { ProblemSolution } from "./sections/problem-solution";
 import { Features } from "./sections/features";
 import { Pricing } from "./sections/pricing";
 import { SocialProof } from "./sections/social-proof";
+import { PlatformStats } from "./sections/platform-stats";
 import { FinalCta } from "./sections/final-cta";
 import { Footer } from "./sections/footer";
 
@@ -18,6 +19,7 @@ export function LandingPage() {
       <Features />
       <Pricing />
       <SocialProof />
+      <PlatformStats />
       <FinalCta />
       <Footer />
     </div>
