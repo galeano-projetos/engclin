@@ -29,6 +29,7 @@ export default async function AdminPage() {
     name: u.name,
     email: u.email,
     role: u.role,
+    specialty: u.specialty,
     active: u.active,
     createdAt: u.createdAt.toLocaleDateString("pt-BR"),
   }));

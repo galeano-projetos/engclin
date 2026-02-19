@@ -221,6 +221,7 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
           vidaUtilAnos: equipment.vidaUtilAnos,
           metodoDepreciacao: equipment.metodoDepreciacao,
           valorResidual: equipment.valorResidual ? Number(equipment.valorResidual) : null,
+          contingencyPlan: equipment.contingencyPlan,
         }}
         units={units}
         equipmentTypes={equipmentTypes}

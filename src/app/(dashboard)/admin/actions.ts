@@ -56,6 +56,7 @@ export async function createUser(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const role = formData.get("role") as string;
+  const specialty = (formData.get("specialty") as string)?.trim() || undefined;
 
   if (!name?.trim() || !email?.trim() || !password?.trim() || !role) {
     return { error: "Todos os campos sao obrigatorios" };
@@ -95,6 +96,7 @@ export async function createUser(formData: FormData) {
       email: email.trim().toLowerCase(),
       password: hashedPassword,
       role: roleResult.data,
+      specialty,
     },
   });
 

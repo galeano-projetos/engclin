@@ -23,7 +23,7 @@ export async function reportPublicProblem(formData: FormData) {
 
   const equipment = await prisma.equipment.findUnique({
     where: { id: equipmentId },
-    select: { id: true, tenantId: true, status: true },
+    select: { id: true, tenantId: true, status: true, criticality: true },
   });
 
   if (!equipment) {
@@ -43,6 +43,11 @@ export async function reportPublicProblem(formData: FormData) {
   const contactInfo = phone ? `${reporterName} (${phone})` : reporterName;
   const fullDescription = `[Reporte Público] ${contactInfo}\n\n${description}`;
 
+  // Calcular SLA baseado na criticidade do equipamento
+  const now = new Date();
+  const slaMinutes = { A: 10, B: 120, C: 1440 };
+  const slaDeadline = new Date(now.getTime() + slaMinutes[equipment.criticality] * 60_000);
+
   await prisma.$transaction(async (tx) => {
     const ticket = await tx.correctiveMaintenance.create({
       data: {
@@ -52,6 +57,7 @@ export async function reportPublicProblem(formData: FormData) {
         description: fullDescription,
         urgency: "MEDIA",
         status: "ABERTO",
+        slaDeadline,
       },
     });
 

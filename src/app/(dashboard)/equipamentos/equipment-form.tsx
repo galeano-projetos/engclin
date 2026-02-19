@@ -35,6 +35,7 @@ interface EquipmentData {
   vidaUtilAnos: number | null;
   metodoDepreciacao: string;
   valorResidual: number | null;
+  contingencyPlan: string | null;
 }
 
 interface EquipmentFormProps {
@@ -179,6 +180,43 @@ export function EquipmentForm({
             ]}
             defaultValue={equipment?.status || "ATIVO"}
           />
+          {criticality === "A" && (
+            <>
+              <div className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">Equipamento Critico</p>
+                    <p className="mt-1 text-sm text-amber-700">
+                      Equipamentos de criticidade A devem ter um plano de manutencao preventiva obrigatoriamente associado. Certifique-se de cadastrar as preventivas apos salvar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="contingencyPlan"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Plano de Contingencia *
+                </label>
+                <textarea
+                  id="contingencyPlan"
+                  name="contingencyPlan"
+                  rows={3}
+                  required
+                  placeholder="Ex: Em caso de falha, usar equipamento reserva do Setor Y. Contatar fornecedor Z no telefone (11) 9999-0000."
+                  defaultValue={equipment?.contingencyPlan || ""}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Descreva o que fazer em caso de falha deste equipamento critico.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

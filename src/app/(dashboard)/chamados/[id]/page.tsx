@@ -14,7 +14,7 @@ export default async function ChamadoDetailPage({ params }: PageProps) {
   const ticket = await prisma.correctiveMaintenance.findFirst({
     where: { id, tenantId },
     include: {
-      equipment: { select: { name: true, patrimony: true, id: true } },
+      equipment: { select: { name: true, patrimony: true, id: true, criticality: true, contingencyPlan: true } },
       openedBy: { select: { name: true } },
       assignedTo: { select: { name: true } },
     },
@@ -38,9 +38,12 @@ export default async function ChamadoDetailPage({ params }: PageProps) {
         cost: ticket.cost ? Number(ticket.cost) : null,
         openedAt: ticket.openedAt.toISOString(),
         closedAt: ticket.closedAt?.toISOString() || null,
+        slaDeadline: ticket.slaDeadline?.toISOString() || null,
         equipmentName: ticket.equipment.name,
         equipmentId: ticket.equipment.id,
         equipmentPatrimony: ticket.equipment.patrimony,
+        equipmentCriticality: ticket.equipment.criticality,
+        equipmentContingencyPlan: ticket.equipment.contingencyPlan,
         openedByName: ticket.openedBy.name,
         assignedToName: ticket.assignedTo?.name || null,
       }}

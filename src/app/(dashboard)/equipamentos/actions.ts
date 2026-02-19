@@ -23,6 +23,7 @@ interface EquipmentFormData {
   vidaUtilAnos?: string;
   metodoDepreciacao?: string;
   valorResidual?: string;
+  contingencyPlan?: string;
 }
 
 function parseFormData(formData: FormData): EquipmentFormData {
@@ -43,6 +44,7 @@ function parseFormData(formData: FormData): EquipmentFormData {
     vidaUtilAnos: (formData.get("vidaUtilAnos") as string) || undefined,
     metodoDepreciacao: (formData.get("metodoDepreciacao") as string) || undefined,
     valorResidual: (formData.get("valorResidual") as string) || undefined,
+    contingencyPlan: (formData.get("contingencyPlan") as string) || undefined,
   };
 }
 
@@ -92,6 +94,7 @@ export async function createEquipment(formData: FormData) {
       criticality: data.criticality,
       status: data.status,
       ownershipType: data.ownershipType,
+      contingencyPlan: data.criticality === "A" ? data.contingencyPlan : undefined,
       loanProvider: data.ownershipType === "COMODATO" ? data.loanProvider : undefined,
       acquisitionDate: data.acquisitionDate
         ? new Date(data.acquisitionDate)
@@ -160,6 +163,7 @@ export async function updateEquipment(id: string, formData: FormData) {
       criticality: data.criticality,
       status: data.status,
       ownershipType: data.ownershipType,
+      contingencyPlan: data.criticality === "A" ? (data.contingencyPlan || null) : null,
       loanProvider: data.ownershipType === "COMODATO" ? data.loanProvider : null,
       acquisitionDate: data.acquisitionDate
         ? new Date(data.acquisitionDate)

@@ -41,6 +41,11 @@ export async function createTicket(formData: FormData) {
     return { error: "Equipamento nao encontrado." };
   }
 
+  // Calcular SLA baseado na criticidade do equipamento
+  const now = new Date();
+  const slaMinutes = { A: 10, B: 120, C: 1440 }; // A=10min, B=2h, C=24h
+  const slaDeadline = new Date(now.getTime() + slaMinutes[equipment.criticality] * 60_000);
+
   await prisma.$transaction(async (tx) => {
     const ticket = await tx.correctiveMaintenance.create({
       data: {
@@ -50,6 +55,7 @@ export async function createTicket(formData: FormData) {
         description,
         urgency: urgency.data,
         status: "ABERTO",
+        slaDeadline,
       },
     });
 

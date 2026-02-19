@@ -14,7 +14,7 @@ export default async function NovoChamadoPage({ searchParams }: PageProps) {
   const equipments = await prisma.equipment.findMany({
     where: { tenantId, status: { not: "DESCARTADO" } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, patrimony: true },
+    select: { id: true, name: true, patrimony: true, criticality: true, contingencyPlan: true },
   });
 
   return (

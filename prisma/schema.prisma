@@ -58,6 +58,8 @@ model User {
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  specialty String?          // Especialidade do tecnico (ex: "Equipamentos de Imagem", "Ventilacao Mecanica")
+
   // Unidades que o usuario pode acessar
   units UserUnit[]
 
@@ -239,6 +241,7 @@ model Equipment {
   vidaUtilAnos         Int?                @default(10)    // Vida util em anos
   metodoDepreciacao    DepreciationMethod  @default(LINEAR)
   valorResidual        Decimal?            // Valor residual apos depreciacao
+  contingencyPlan  String?         // Plano de contingencia para equipamentos criticos
   photoUrl         String?
   deactivationDate   DateTime?
   deactivationReason String?
@@ -339,6 +342,7 @@ model CorrectiveMaintenance {
   partsUsed     String?      // Pecas utilizadas
   timeSpent     Int?         // Tempo gasto em minutos
   cost          Decimal?     // Custo do reparo (precisao financeira)
+  slaDeadline   DateTime?    // Data/hora limite para primeiro atendimento (baseado na criticidade)
   openedAt      DateTime     @default(now())
   closedAt      DateTime?
   updatedAt     DateTime     @updatedAt

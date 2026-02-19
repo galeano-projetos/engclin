@@ -5,7 +5,8 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TicketFilters } from "./ticket-filters";
-import { TicketStatus, Urgency } from "@prisma/client";
+import { SlaIndicator } from "./sla-indicator";
+import { TicketStatus, Urgency, Criticality } from "@prisma/client";
 
 const statusLabels: Record<TicketStatus, string> = {
   ABERTO: "Aberto",
@@ -35,6 +36,18 @@ const urgencyVariant: Record<Urgency, "muted" | "info" | "warning" | "danger"> =
   CRITICA: "danger",
 };
 
+const criticalityLabels: Record<Criticality, string> = {
+  A: "Critico",
+  B: "Moderado",
+  C: "Baixo",
+};
+
+const criticalityVariant: Record<Criticality, "danger" | "warning" | "muted"> = {
+  A: "danger",
+  B: "warning",
+  C: "muted",
+};
+
 interface PageProps {
   searchParams: Promise<{
     status?: TicketStatus;
@@ -60,7 +73,8 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
       urgency: true,
       status: true,
       openedAt: true,
-      equipment: { select: { name: true, patrimony: true } },
+      slaDeadline: true,
+      equipment: { select: { name: true, patrimony: true, criticality: true } },
       openedBy: { select: { name: true } },
       assignedTo: { select: { name: true } },
     },
@@ -102,15 +116,18 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
                   )}
                 </div>
                 <div className="ml-2 flex flex-shrink-0 gap-1.5">
-                  <Badge variant={urgencyVariant[t.urgency]}>{urgencyLabels[t.urgency]}</Badge>
+                  <Badge variant={criticalityVariant[t.equipment.criticality]}>{criticalityLabels[t.equipment.criticality]}</Badge>
                   <Badge variant={statusVariant[t.status]}>{statusLabels[t.status]}</Badge>
                 </div>
               </div>
               <p className="mt-2 line-clamp-2 text-sm text-gray-600">{t.description}</p>
-              <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                 <span>Por {t.openedBy.name}</span>
-                {t.assignedTo && <span>Técnico: {t.assignedTo.name}</span>}
+                {t.assignedTo && <span>Tecnico: {t.assignedTo.name}</span>}
                 <span>{t.openedAt.toLocaleDateString("pt-BR")}</span>
+                {t.slaDeadline && (t.status === "ABERTO" || t.status === "EM_ATENDIMENTO") && (
+                  <SlaIndicator deadline={t.slaDeadline.toISOString()} />
+                )}
               </div>
             </Link>
           ))
@@ -124,9 +141,9 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
             <tr>
               <th scope="col" className="px-4 py-3">Equipamento</th>
               <th scope="col" className="px-4 py-3">Problema</th>
-              <th scope="col" className="px-4 py-3">Aberto por</th>
-              <th scope="col" className="px-4 py-3">Técnico</th>
-              <th scope="col" className="px-4 py-3">Urgência</th>
+              <th scope="col" className="px-4 py-3">Criticidade</th>
+              <th scope="col" className="px-4 py-3">SLA</th>
+              <th scope="col" className="px-4 py-3">Tecnico</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Data</th>
               <th scope="col" className="px-4 py-3"><span className="sr-only">Acoes</span></th>
@@ -135,9 +152,7 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
           <tbody className="divide-y">
             {tickets.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                  Nenhum chamado encontrado.
-                </td>
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhum chamado encontrado.</td>
               </tr>
             ) : (
               tickets.map((t) => (
@@ -155,16 +170,22 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
                   <td className="max-w-xs truncate px-4 py-3 text-gray-600">
                     {t.description}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {t.openedBy.name}
+                  <td className="px-4 py-3">
+                    <Badge variant={criticalityVariant[t.equipment.criticality]}>
+                      {criticalityLabels[t.equipment.criticality]}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {t.slaDeadline && (t.status === "ABERTO" || t.status === "EM_ATENDIMENTO") ? (
+                      <SlaIndicator deadline={t.slaDeadline.toISOString()} />
+                    ) : t.status === "RESOLVIDO" || t.status === "FECHADO" ? (
+                      <span className="text-xs text-gray-400">Concluido</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {t.assignedTo?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={urgencyVariant[t.urgency]}>
-                      {urgencyLabels[t.urgency]}
-                    </Badge>
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={statusVariant[t.status]}>

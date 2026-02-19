@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { acceptTicket, resolveTicket, closeTicket } from "../actions";
+import { SlaIndicator } from "../sla-indicator";
 import Link from "next/link";
 
 interface TicketData {
@@ -23,6 +24,9 @@ interface TicketData {
   equipmentName: string;
   equipmentId: string;
   equipmentPatrimony: string | null;
+  equipmentCriticality: string;
+  equipmentContingencyPlan: string | null;
+  slaDeadline: string | null;
   openedByName: string;
   assignedToName: string | null;
 }
@@ -53,6 +57,24 @@ const urgencyVariant: Record<string, "muted" | "info" | "warning" | "danger"> = 
   MEDIA: "info",
   ALTA: "warning",
   CRITICA: "danger",
+};
+
+const criticalityLabels: Record<string, string> = {
+  A: "Critico",
+  B: "Moderado",
+  C: "Baixo",
+};
+
+const criticalityVariant: Record<string, "danger" | "warning" | "muted"> = {
+  A: "danger",
+  B: "warning",
+  C: "muted",
+};
+
+const slaLabels: Record<string, string> = {
+  A: "10 minutos",
+  B: "2 horas",
+  C: "24 horas",
 };
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -130,6 +152,21 @@ export function TicketDetails({ ticket }: { ticket: TicketData }) {
           )}
         </div>
       </div>
+
+      {/* Alerta de plano de contingência para equipamentos críticos */}
+      {ticket.equipmentCriticality === "A" && ticket.equipmentContingencyPlan && (ticket.status === "ABERTO" || ticket.status === "EM_ATENDIMENTO") && (
+        <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-red-800">Equipamento Critico — Plano de Contingencia</p>
+              <p className="mt-1 text-sm text-red-700">{ticket.equipmentContingencyPlan}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Formulário de resolução */}
       {showResolveForm && (
@@ -240,14 +277,39 @@ export function TicketDetails({ ticket }: { ticket: TicketData }) {
             }
           />
           <InfoRow
-            label="Urgência"
+            label="Criticidade"
+            value={
+              <Badge variant={criticalityVariant[ticket.equipmentCriticality]}>
+                {criticalityLabels[ticket.equipmentCriticality]}
+              </Badge>
+            }
+          />
+          <InfoRow
+            label="Urgencia"
             value={
               <Badge variant={urgencyVariant[ticket.urgency]}>
                 {urgencyLabels[ticket.urgency]}
               </Badge>
             }
           />
-          <InfoRow label="Descrição do Problema" value={ticket.description} />
+          <InfoRow
+            label="SLA (Primeiro Atendimento)"
+            value={
+              ticket.slaDeadline ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">
+                    Limite: {new Date(ticket.slaDeadline).toLocaleString("pt-BR")} ({slaLabels[ticket.equipmentCriticality]})
+                  </span>
+                  {(ticket.status === "ABERTO" || ticket.status === "EM_ATENDIMENTO") && (
+                    <SlaIndicator deadline={ticket.slaDeadline} />
+                  )}
+                </div>
+              ) : (
+                <span className="text-gray-400">Nao definido</span>
+              )
+            }
+          />
+          <InfoRow label="Descricao do Problema" value={ticket.description} />
           <InfoRow label="Aberto por" value={ticket.openedByName} />
           <InfoRow
             label="Data de Abertura"

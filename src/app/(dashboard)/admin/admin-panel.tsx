@@ -17,6 +17,7 @@ interface UserData {
   name: string;
   email: string;
   role: string;
+  specialty: string | null;
   active: boolean;
   createdAt: string;
 }
@@ -145,12 +146,18 @@ function UsersTab({ users }: { users: UserData[] }) {
                   required
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  <option value="TECNICO">Técnico</option>
+                  <option value="TECNICO">Tecnico</option>
                   <option value="COORDENADOR">Coordenador</option>
                   <option value="FISCAL">Fiscal</option>
                   <option value="MASTER">Master</option>
                 </select>
               </div>
+              <Input
+                id="specialty"
+                name="specialty"
+                label="Especialidade"
+                placeholder="Ex: Equipamentos de Imagem, Ventilacao Mecanica"
+              />
             </div>
             {error && (
               <p className="text-sm text-red-600">{error}</p>
@@ -173,6 +180,9 @@ function UsersTab({ users }: { users: UserData[] }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-900">{user.name}</p>
                 <p className="text-sm text-gray-500">{user.email}</p>
+                {user.specialty && (
+                  <p className="text-xs text-gray-400">{user.specialty}</p>
+                )}
               </div>
               <div className="ml-2 flex flex-shrink-0 gap-1.5">
                 <Badge variant={roleVariant[user.role] || "muted"}>
@@ -212,6 +222,9 @@ function UsersTab({ users }: { users: UserData[] }) {
                 Perfil
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                Especialidade
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
@@ -235,6 +248,9 @@ function UsersTab({ users }: { users: UserData[] }) {
                   <Badge variant={roleVariant[user.role] || "muted"}>
                     {roleLabels[user.role] || user.role}
                   </Badge>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                  {user.specialty || "—"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <Badge variant={user.active ? "success" : "muted"}>

@@ -31,6 +31,7 @@ interface SerializedEquipment {
   vidaUtilAnos: number | null;
   metodoDepreciacao: string;
   valorResidual: number | null;
+  contingencyPlan: string | null;
 }
 
 interface Unit {
@@ -140,6 +141,7 @@ export function EquipmentDetails({
             vidaUtilAnos: equipment.vidaUtilAnos,
             metodoDepreciacao: equipment.metodoDepreciacao,
             valorResidual: equipment.valorResidual,
+            contingencyPlan: equipment.contingencyPlan,
           }}
           action={updateEquipmentAction}
           plan={plan}
@@ -218,6 +220,16 @@ export function EquipmentDetails({
           />
           {equipment.ownershipType === "COMODATO" && equipment.loanProvider && (
             <InfoRow label="Fornecedor Comodato" value={equipment.loanProvider} />
+          )}
+          {equipment.criticality === "A" && equipment.contingencyPlan && (
+            <InfoRow
+              label="Plano de Contingencia"
+              value={
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  {equipment.contingencyPlan}
+                </div>
+              }
+            />
           )}
           <InfoRow
             label="Data de Aquisicao"
