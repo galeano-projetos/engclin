@@ -48,11 +48,6 @@ function PagamentoForm() {
     router.refresh();
   }
 
-  function handleSkip() {
-    router.push("/dashboard");
-    router.refresh();
-  }
-
   return (
     <div className="w-full max-w-lg">
       <div className="mb-8 text-center">
@@ -139,17 +134,7 @@ function PagamentoForm() {
           Ativar trial de 30 dias
         </Button>
 
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="text-sm text-gray-400 underline hover:text-gray-600"
-          >
-            Pular por agora e ir para o sistema
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-gray-400">
+<p className="text-center text-xs text-gray-400">
           Seus dados de pagamento são processados de forma segura pelo Asaas.
           Nenhum valor será cobrado durante o período de trial.
         </p>
