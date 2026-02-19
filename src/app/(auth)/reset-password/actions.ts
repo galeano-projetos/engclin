@@ -50,11 +50,11 @@ export async function resetPassword(formData: FormData) {
       return { error: "Link inválido ou expirado. Solicite um novo." };
     }
 
-    // Update password
+    // Update password and clear forced change flag
     const hashedPassword = await hash(password, 10);
     await prisma.user.update({
       where: { email },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, mustChangePassword: false },
     });
 
     // Delete all tokens for this email

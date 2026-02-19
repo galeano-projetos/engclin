@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Rotas publicas — nao exigem autenticacao
-const publicPaths = ["/", "/login", "/registro", "/api/auth", "/forgot-password", "/reset-password"];
+const publicPaths = ["/", "/login", "/registro", "/api/auth", "/forgot-password", "/reset-password", "/trocar-senha"];
 const publicPrefixes = ["/api/auth/", "/equipamento/"];
 // Rotas publicas exatas (nao prefixos)
 const publicExact = ["/api/alerts/check"];

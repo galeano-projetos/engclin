@@ -48,6 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           tenantId: user.tenantId ?? undefined,
           tenantName: user.tenant?.name ?? undefined,
           plan: user.tenant?.plan ?? undefined,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -60,6 +61,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.tenantId = (user as { tenantId?: string }).tenantId;
         token.tenantName = (user as { tenantName?: string }).tenantName;
         token.plan = (user as { plan?: string }).plan;
+        token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword;
+      } else if (token.mustChangePassword) {
+        // Check DB to see if flag was cleared (after user changed password)
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { mustChangePassword: true },
+        });
+        if (dbUser && !dbUser.mustChangePassword) {
+          token.mustChangePassword = false;
+        }
       }
       return token;
     },
@@ -70,6 +81,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.tenantId = token.tenantId as string | undefined;
         session.user.tenantName = token.tenantName as string | undefined;
         session.user.plan = token.plan as Plan | undefined;
+        session.user.mustChangePassword = token.mustChangePassword as boolean | undefined;
       }
       return session;
     },

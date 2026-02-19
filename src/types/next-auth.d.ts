@@ -11,6 +11,7 @@ declare module "next-auth" {
       tenantId?: string;
       tenantName?: string;
       plan?: Plan;
+      mustChangePassword?: boolean;
     };
   }
 }

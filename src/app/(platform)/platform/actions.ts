@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db";
 import { checkPlatformAdmin } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
+import crypto from "crypto";
 import { emailSchema, passwordSchema } from "@/lib/validation";
+import { sendPasswordResetEmail } from "@/lib/email";
 import { z } from "zod";
 
 const cnpjSchema = z.string().min(14, "CNPJ deve ter no minimo 14 caracteres").max(18);
@@ -266,8 +268,31 @@ export async function resetUserPassword(userId: string) {
 
   await prisma.user.update({
     where: { id: userId },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, mustChangePassword: true },
   });
+
+  // Send password reset email (failure does not block the operation)
+  try {
+    await prisma.passwordResetToken.deleteMany({ where: { email: user.email } });
+
+    const rawToken = crypto.randomUUID();
+    const hashedToken = await hash(rawToken, 10);
+
+    await prisma.passwordResetToken.create({
+      data: {
+        email: user.email,
+        token: hashedToken,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      },
+    });
+
+    const baseUrl = process.env.AUTH_URL || "http://localhost:3000";
+    const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+
+    await sendPasswordResetEmail(user.email, resetUrl);
+  } catch {
+    // Email failure should not block the password reset
+  }
 
   return { success: true, temporaryPassword: newPassword };
 }

@@ -14,6 +14,10 @@ export default async function PlatformLayout({
     redirect("/login");
   }
 
+  if (session.user.mustChangePassword) {
+    redirect("/trocar-senha");
+  }
+
   if (!isPlatformAdmin(session.user.role)) {
     redirect("/dashboard");
   }

@@ -346,7 +346,8 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
               {resetModal.password}
             </div>
             <p className="mt-2 text-xs text-gray-500">
-              Copie esta senha e envie ao usuário. Ela não será exibida novamente.
+              Um email com link de redefinicao tambem foi enviado ao usuario.
+              O usuario sera obrigado a alterar a senha no proximo login.
             </p>
             <div className="mt-4 flex justify-end">
               <Button onClick={() => setResetModal(null)}>Fechar</Button>
