@@ -93,6 +93,7 @@ export async function registerStep1(formData: FormData): Promise<{ error?: strin
           plan: tenantPlan,
           razaoSocial,
           nomeFantasia,
+          telefone: phone || null,
           subscriptionStatus: "TRIAL",
           trialEndsAt: trialEnds,
         },
@@ -140,8 +141,9 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const holderCpfCnpj = (formData.get("holderCpfCnpj") as string)?.replace(/\D/g, "");
     const holderPostalCode = (formData.get("holderPostalCode") as string)?.replace(/\D/g, "");
     const holderEmail = (formData.get("holderEmail") as string)?.trim();
+    const holderPhone = (formData.get("holderPhone") as string)?.replace(/\D/g, "");
 
-    if (!holderName || !cardNumber || !expiryMonth || !expiryYear || !ccv || !holderCpfCnpj || !holderPostalCode) {
+    if (!holderName || !cardNumber || !expiryMonth || !expiryYear || !ccv || !holderCpfCnpj || !holderPostalCode || !holderPhone) {
       return { error: "Preencha todos os dados do cartão" };
     }
 
@@ -160,7 +162,7 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
       name: tenant.name,
       cpfCnpj: tenant.cnpj,
       email: masterUser?.email || holderEmail || "",
-      phone: tenant.telefone || undefined,
+      phone: tenant.telefone || holderPhone,
       postalCode: tenant.cep || holderPostalCode,
       externalReference: tenantId,
     });
@@ -185,7 +187,7 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
         cpfCnpj: holderCpfCnpj,
         postalCode: holderPostalCode,
         addressNumber: tenant.numero || "0",
-        phone: tenant.telefone || undefined,
+        phone: tenant.telefone || holderPhone,
       },
     });
 
