@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -8,16 +7,12 @@ export const dynamic = "force-dynamic";
  *
  * Consulta dados do CNPJ via BrasilAPI (gratuita, sem autenticacao).
  * Retorna dados normalizados do cartao CNPJ.
+ * Rota publica — usada no formulario de registro (usuario nao autenticado).
  */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ cnpj: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { cnpj } = await params;
   const digits = cnpj.replace(/\D/g, "");
 
