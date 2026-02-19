@@ -112,6 +112,23 @@ export function NiimbotPrintButton({
       y += 4;
       ctx.fillText(unitName, centerX, y);
 
+      // Vitalis logo centered in remaining space at bottom
+      try {
+        const logoUrl = typeof window !== "undefined"
+          ? `${window.location.origin}/vitalis-logo-label.png`
+          : "/vitalis-logo-label.png";
+        const logoImg = await loadImage(logoUrl);
+        const logoMaxW = 160;
+        const logoMaxH = 50;
+        const scale = Math.min(logoMaxW / logoImg.width, logoMaxH / logoImg.height);
+        const logoW = logoImg.width * scale;
+        const logoH = logoImg.height * scale;
+        const logoY = vH - logoH - 16;
+        ctx.drawImage(logoImg, (vW - logoW) / 2, logoY, logoW, logoH);
+      } catch {
+        // Logo failed to load — skip silently
+      }
+
       ctx.restore();
 
       // Border (preview)
