@@ -20,7 +20,6 @@ function AnimatedCounter({ target, duration = 2000 }: { target: number; duration
     function step(currentTime: number) {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.floor(eased * target);
 
@@ -43,7 +42,7 @@ function AnimatedCounter({ target, duration = 2000 }: { target: number; duration
 }
 
 export function PlatformStats() {
-  const { ref, inView } = useInView({ threshold: 0.3 });
+  const { ref, inView } = useInView({ threshold: 0.1 });
   const [stats, setStats] = useState<Stats | null>(null);
   const [started, setStarted] = useState(false);
 
@@ -55,7 +54,7 @@ export function PlatformStats() {
         setStats(data);
       }
     } catch {
-      // Silently fail — section won't show
+      // Silently fail
     }
   }, []);
 
@@ -69,70 +68,73 @@ export function PlatformStats() {
     }
   }, [inView, stats, started]);
 
-  // Don't render if no data or zero equipments
-  if (!stats || stats.totalEquipments === 0) return null;
+  const hasData = stats && stats.totalEquipments > 0;
 
   return (
     <section
       ref={ref}
-      className="bg-gradient-to-b from-gray-50 to-white px-4 py-20 sm:px-6 lg:px-8"
+      className={`px-4 sm:px-6 lg:px-8 transition-all duration-500 ${
+        hasData
+          ? "bg-gradient-to-b from-gray-50 to-white py-20"
+          : "h-0 overflow-hidden py-0"
+      }`}
     >
-      <div className="mx-auto max-w-4xl text-center">
-        <p
-          className={`text-sm font-semibold uppercase tracking-widest text-teal-600 ${
-            inView ? "animate-fade-in-up" : "opacity-0"
-          }`}
-        >
-          Plataforma em numeros
-        </p>
-        <h2
-          className={`mt-3 text-3xl font-bold text-gray-900 sm:text-4xl ${
-            inView ? "animate-fade-in-up" : "opacity-0"
-          }`}
-          style={{ animationDelay: inView ? "150ms" : undefined }}
-        >
-          Ja gerenciamos milhares de ativos.
-        </h2>
-
-        <div className="mt-12 grid gap-8 sm:grid-cols-2">
-          {/* Total equipamentos */}
-          <div
-            className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+      {hasData && (
+        <div className="mx-auto max-w-4xl text-center">
+          <p
+            className={`text-sm font-semibold uppercase tracking-widest text-teal-600 ${
               inView ? "animate-fade-in-up" : "opacity-0"
             }`}
-            style={{ animationDelay: inView ? "300ms" : undefined }}
           >
-            <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
-              {started ? <AnimatedCounter target={stats.totalEquipments} /> : "0"}
-              <span className="text-3xl text-teal-400">+</span>
-            </div>
-            <p className="mt-3 text-lg text-gray-600">
-              Equipamentos gerenciados
-            </p>
-            <p className="mt-1 text-sm text-gray-400">
-              Ativos monitorados em tempo real
-            </p>
-          </div>
-
-          {/* Total empresas */}
-          <div
-            className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+            Plataforma em numeros
+          </p>
+          <h2
+            className={`mt-3 text-3xl font-bold text-gray-900 sm:text-4xl ${
               inView ? "animate-fade-in-up" : "opacity-0"
             }`}
-            style={{ animationDelay: inView ? "450ms" : undefined }}
+            style={{ animationDelay: inView ? "150ms" : undefined }}
           >
-            <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
-              {started ? <AnimatedCounter target={stats.totalTenants} /> : "0"}
+            Ja gerenciamos milhares de ativos.
+          </h2>
+
+          <div className="mt-12 grid gap-8 sm:grid-cols-2">
+            <div
+              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+                inView ? "animate-fade-in-up" : "opacity-0"
+              }`}
+              style={{ animationDelay: inView ? "300ms" : undefined }}
+            >
+              <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
+                {started ? <AnimatedCounter target={stats.totalEquipments} /> : "0"}
+                <span className="text-3xl text-teal-400">+</span>
+              </div>
+              <p className="mt-3 text-lg text-gray-600">
+                Equipamentos gerenciados
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                Ativos monitorados em tempo real
+              </p>
             </div>
-            <p className="mt-3 text-lg text-gray-600">
-              Empresas confiam no Vitalis
-            </p>
-            <p className="mt-1 text-sm text-gray-400">
-              Hospitais, clinicas e laboratorios
-            </p>
+
+            <div
+              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+                inView ? "animate-fade-in-up" : "opacity-0"
+              }`}
+              style={{ animationDelay: inView ? "450ms" : undefined }}
+            >
+              <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
+                {started ? <AnimatedCounter target={stats.totalTenants} /> : "0"}
+              </div>
+              <p className="mt-3 text-lg text-gray-600">
+                Empresas confiam no Vitalis
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                Hospitais, clinicas e laboratorios
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
