@@ -26,7 +26,9 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Column 1: Brand */}
           <div>
-            <VitalisLogo size="sm" />
+            <div className="inline-block rounded-lg bg-white p-2">
+              <VitalisLogo size="sm" />
+            </div>
             <p className="mt-3 text-sm text-gray-400">
               Gestão de Equipamentos com IA.
               <br />A plataforma completa para engenharia clínica.
