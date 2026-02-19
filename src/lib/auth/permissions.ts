@@ -80,6 +80,10 @@ const permissions: Record<string, UserRole[]> = {
   "training.create": ["MASTER"],
   "training.complete": ["MASTER", "TECNICO"],
 
+  // PGTS
+  "pgts.view": ["MASTER", "TECNICO", "COORDENADOR", "FISCAL"],
+  "pgts.create": ["MASTER"],
+
   // Integracoes ERP
   "integration.view": ["MASTER"],
   "integration.manage": ["MASTER"],
@@ -117,6 +121,7 @@ export interface NavPermissions {
   fisicaMedica: boolean;
   treinamentos: boolean;
   relatorios: boolean;
+  pgts: boolean;
   inteligencia: boolean;
   admin: boolean;
 }
@@ -131,6 +136,7 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     fisicaMedica: hasPermission(role, "physics.view"),
     treinamentos: hasPermission(role, "training.view"),
     relatorios: hasPermission(role, "report.view"),
+    pgts: hasPermission(role, "pgts.view"),
     inteligencia: hasPermission(role, "ai.view"),
     admin: hasPermission(role, "admin.users"),
   };

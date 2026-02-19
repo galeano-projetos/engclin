@@ -77,6 +77,9 @@ const planRestrictions: Record<string, Plan[]> = {
   // Depreciacao de ativos (ENTERPRISE)
   "depreciation.view": ["ENTERPRISE"],
   "report.depreciacao": ["ENTERPRISE"],
+
+  // PGTS - geracao (ENTERPRISE)
+  "pgts.create": ["ENTERPRISE"],
 };
 
 /**

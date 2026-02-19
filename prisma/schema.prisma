@@ -32,6 +32,7 @@ model Tenant {
   integrationConfigs IntegrationConfig[]
   trainings          Training[]
   trainingCompletions TrainingCompletion[]
+  pgtsVersions       PgtsVersion[]
 
   @@map("tenants")
 }
@@ -70,6 +71,8 @@ model User {
   assignedTickets CorrectiveMaintenance[] @relation("TicketAssignee")
   // Treinamentos concluidos
   trainingCompletions TrainingCompletion[]
+  // Versoes PGTS geradas
+  pgtsVersions PgtsVersion[]
 
   @@index([tenantId])
   @@map("users")
@@ -622,4 +625,24 @@ model TrainingCompletion {
   @@index([tenantId])
   @@index([userId])
   @@map("training_completions")
+}
+
+// ============================================================
+// PGTS (Plano de Gerenciamento de Tecnologias em Saude)
+// ============================================================
+model PgtsVersion {
+  id          String   @id @default(cuid())
+  tenantId    String
+  version     Int
+  generatedBy String
+  fileName    String
+  fileData    Bytes
+  sections    Json     // Conteudo das 12 secoes do PGTS
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [generatedBy], references: [id])
+
+  @@index([tenantId])
+  @@map("pgts_versions")
 }
