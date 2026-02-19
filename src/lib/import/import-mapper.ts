@@ -70,9 +70,33 @@ function parseStatus(val?: string): EquipmentStatus | undefined {
 
 function parseDecimal(val?: string): number | undefined {
   if (!val) return undefined;
-  // Remove currency symbols, dots as thousands separator, replace comma with dot
-  const cleaned = val.replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
-  const num = parseFloat(cleaned);
+  // Remove currency symbols and whitespace
+  const cleaned = val.replace(/[R$\s]/g, "");
+
+  // Detect format: Brazilian (1.234,56) vs plain number (1234.56)
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  let normalized: string;
+  if (hasComma && hasDot) {
+    const lastDot = cleaned.lastIndexOf(".");
+    const lastComma = cleaned.lastIndexOf(",");
+    if (lastComma > lastDot) {
+      // Brazilian: 3.681.752,99 → dots are thousands, comma is decimal
+      normalized = cleaned.replace(/\./g, "").replace(",", ".");
+    } else {
+      // US: 3,681,752.99 → commas are thousands, dot is decimal
+      normalized = cleaned.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    // Only comma: 3681752,99 → comma is decimal
+    normalized = cleaned.replace(",", ".");
+  } else {
+    // Only dot or no separator: 3681752.99 → already correct
+    normalized = cleaned;
+  }
+
+  const num = parseFloat(normalized);
   return isNaN(num) ? undefined : num;
 }
 

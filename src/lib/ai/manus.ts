@@ -83,17 +83,24 @@ async function pollTask(taskId: string): Promise<ManusTaskResponse> {
 function extractText(task: ManusTaskResponse): string {
   if (!task.output) return "";
 
+  // Collect all text blocks from assistant messages
+  const texts: string[] = [];
   for (const msg of task.output) {
     if (msg.role === "assistant" && msg.content) {
       for (const part of msg.content) {
         if (part.type === "output_text" || part.type === "text") {
-          return part.text;
+          if (part.text?.trim()) {
+            texts.push(part.text.trim());
+          }
         }
       }
     }
   }
 
-  return "";
+  if (texts.length === 0) return "";
+
+  // Return the longest text block (the actual research result, not the initial acknowledgment)
+  return texts.reduce((a, b) => (b.length > a.length ? b : a), "");
 }
 
 export async function manusGenerate(
