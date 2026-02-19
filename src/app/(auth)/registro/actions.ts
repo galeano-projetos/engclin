@@ -140,17 +140,18 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const ccv = (formData.get("ccv") as string)?.trim();
     const holderCpfCnpj = (formData.get("holderCpfCnpj") as string)?.replace(/\D/g, "");
     const holderPostalCode = (formData.get("holderPostalCode") as string)?.replace(/\D/g, "");
-    const holderEmail = (formData.get("holderEmail") as string)?.trim();
-    const holderPhone = (formData.get("holderPhone") as string)?.replace(/\D/g, "");
 
-    if (!holderName || !cardNumber || !expiryMonth || !expiryYear || !ccv || !holderCpfCnpj || !holderPostalCode || !holderPhone) {
+    if (!holderName || !cardNumber || !expiryMonth || !expiryYear || !ccv || !holderCpfCnpj || !holderPostalCode) {
       return { error: "Preencha todos os dados do cartão" };
     }
 
-    // Buscar usuario MASTER para email
+    // Buscar usuario MASTER para email e telefone (cadastrados no passo 1)
     const masterUser = await prisma.user.findFirst({
       where: { tenantId, role: "MASTER" },
     });
+
+    const email = masterUser?.email || "";
+    const phone = tenant.telefone || "";
 
     // Determinar valor pelo plano
     const planSlug = tenant.plan.toLowerCase() as keyof typeof PLAN_PRICES;
@@ -161,8 +162,8 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const customer = await createCustomer({
       name: tenant.name,
       cpfCnpj: tenant.cnpj,
-      email: masterUser?.email || holderEmail || "",
-      phone: tenant.telefone || holderPhone,
+      email,
+      phone,
       postalCode: tenant.cep || holderPostalCode,
       externalReference: tenantId,
     });
@@ -183,11 +184,11 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
       },
       creditCardHolderInfo: {
         name: holderName,
-        email: masterUser?.email || holderEmail || "",
+        email,
         cpfCnpj: holderCpfCnpj,
         postalCode: holderPostalCode,
         addressNumber: tenant.numero || "0",
-        phone: tenant.telefone || holderPhone,
+        phone,
       },
     });
 

@@ -25,26 +25,27 @@ export async function POST(request: Request) {
     const payment = body.payment;
     const subscription = body.subscription;
 
-    console.log(`[Asaas Webhook] Event: ${event}`);
+    // Extrair IDs — subscription pode ser string (ID) ou objeto com .id
+    const subscriptionId =
+      typeof subscription === "string"
+        ? subscription
+        : subscription?.id || payment?.subscription || null;
+    const customerId = payment?.customer || subscription?.customer || null;
+
+    console.log(`[Asaas Webhook] Event: ${event}, subscription: ${subscriptionId}, customer: ${customerId}`);
 
     // Encontrar o tenant pelo asaasSubscriptionId ou asaasCustomerId
     let tenant = null;
 
-    if (subscription) {
+    if (subscriptionId) {
       tenant = await prisma.tenant.findFirst({
-        where: { asaasSubscriptionId: subscription },
+        where: { asaasSubscriptionId: subscriptionId },
       });
     }
 
-    if (!tenant && payment?.subscription) {
+    if (!tenant && customerId) {
       tenant = await prisma.tenant.findFirst({
-        where: { asaasSubscriptionId: payment.subscription },
-      });
-    }
-
-    if (!tenant && payment?.customer) {
-      tenant = await prisma.tenant.findFirst({
-        where: { asaasCustomerId: payment.customer },
+        where: { asaasCustomerId: customerId },
       });
     }
 

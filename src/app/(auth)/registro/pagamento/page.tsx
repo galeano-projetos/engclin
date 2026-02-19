@@ -117,25 +117,10 @@ function PagamentoForm() {
             placeholder="000.000.000-00"
           />
           <Input
-            name="holderPhone"
-            label="Telefone do titular"
-            required
-            placeholder="(00) 00000-0000"
-          />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input
             name="holderPostalCode"
             label="CEP do titular"
             required
             placeholder="00000-000"
-          />
-          <Input
-            name="holderEmail"
-            label="Email para notas fiscais"
-            type="email"
-            placeholder="financeiro@empresa.com"
           />
         </div>
 
