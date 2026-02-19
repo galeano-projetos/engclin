@@ -32,7 +32,7 @@ async function createTask(
   systemPrompt: string,
   userPrompt: string
 ): Promise<ManusTaskResponse> {
-  const response = await fetch(`${MANUS_BASE_URL}/responses`, {
+  const response = await fetch(`${MANUS_BASE_URL}/v1/responses`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
@@ -58,7 +58,7 @@ async function pollTask(taskId: string): Promise<ManusTaskResponse> {
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 
-    const response = await fetch(`${MANUS_BASE_URL}/responses/${taskId}`, {
+    const response = await fetch(`${MANUS_BASE_URL}/v1/responses/${taskId}`, {
       headers: getHeaders(),
     });
 
