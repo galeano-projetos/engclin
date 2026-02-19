@@ -1,0 +1,87 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * POST /api/webhooks/asaas
+ *
+ * Recebe eventos do Asaas sobre pagamentos e subscriptions.
+ * Atualiza o subscriptionStatus do Tenant conforme o evento.
+ */
+export async function POST(request: Request) {
+  try {
+    // Validar token do webhook (opcional mas recomendado)
+    const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
+    if (webhookToken) {
+      const authHeader = request.headers.get("asaas-access-token");
+      if (authHeader !== webhookToken) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
+    const body = await request.json();
+    const event = body.event as string;
+    const payment = body.payment;
+    const subscription = body.subscription;
+
+    console.log(`[Asaas Webhook] Event: ${event}`);
+
+    // Encontrar o tenant pelo asaasSubscriptionId ou asaasCustomerId
+    let tenant = null;
+
+    if (subscription) {
+      tenant = await prisma.tenant.findFirst({
+        where: { asaasSubscriptionId: subscription },
+      });
+    }
+
+    if (!tenant && payment?.subscription) {
+      tenant = await prisma.tenant.findFirst({
+        where: { asaasSubscriptionId: payment.subscription },
+      });
+    }
+
+    if (!tenant && payment?.customer) {
+      tenant = await prisma.tenant.findFirst({
+        where: { asaasCustomerId: payment.customer },
+      });
+    }
+
+    if (!tenant) {
+      console.log("[Asaas Webhook] Tenant nao encontrado para o evento");
+      return NextResponse.json({ received: true });
+    }
+
+    // Atualizar status conforme o evento
+    let newStatus: string | null = null;
+
+    switch (event) {
+      case "PAYMENT_CONFIRMED":
+      case "PAYMENT_RECEIVED":
+        newStatus = "ACTIVE";
+        break;
+      case "PAYMENT_OVERDUE":
+        newStatus = "OVERDUE";
+        break;
+      case "PAYMENT_REFUNDED":
+      case "SUBSCRIPTION_DELETED":
+      case "SUBSCRIPTION_INACTIVATED":
+        newStatus = "CANCELLED";
+        break;
+    }
+
+    if (newStatus) {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { subscriptionStatus: newStatus },
+      });
+      console.log(`[Asaas Webhook] Tenant ${tenant.id} status -> ${newStatus}`);
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error("[Asaas Webhook] Error:", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}

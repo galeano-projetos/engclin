@@ -32,6 +32,12 @@ model Tenant {
   email              String?
   atividadePrincipal String?  // CNAE descricao
 
+  // Asaas (cobranca recorrente)
+  asaasCustomerId     String?
+  asaasSubscriptionId String?
+  trialEndsAt         DateTime?
+  subscriptionStatus  String?   // TRIAL, ACTIVE, OVERDUE, CANCELLED
+
   lastOsNumber Int      @default(0)
 
   users          User[]
@@ -659,4 +665,22 @@ model PgtsVersion {
 
   @@index([tenantId])
   @@map("pgts_versions")
+}
+
+// ============================================================
+// LEAD (captura de prospects da landing page)
+// ============================================================
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  cnpj      String?
+  plan      String   // slug do plano escolhido
+  source    String   @default("landing-page")
+  converted Boolean  @default(false)
+  tenantId  String?
+  createdAt DateTime @default(now())
+
+  @@map("leads")
 }

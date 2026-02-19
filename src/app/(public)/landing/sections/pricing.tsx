@@ -111,7 +111,7 @@ export function Pricing() {
 
               {/* CTA */}
               <a
-                href="/login"
+                href={`/registro?plano=${plan.slug}&ciclo=${isAnnual ? "anual" : "mensal"}`}
                 className={`mt-8 block rounded-xl py-3 text-center text-sm font-semibold transition-all ${
                   plan.highlighted
                     ? "bg-teal-600 text-white shadow-lg shadow-teal-600/20 hover:bg-teal-700"
