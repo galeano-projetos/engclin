@@ -69,6 +69,7 @@ export function PlatformStats() {
   }, [inView, stats, started]);
 
   const hasData = stats && stats.totalEquipments > 0;
+  const showTenants = stats != null && stats.totalTenants >= 10;
 
   return (
     <section
@@ -97,9 +98,9 @@ export function PlatformStats() {
             Ja gerenciamos milhares de ativos.
           </h2>
 
-          <div className="mt-12 grid gap-8 sm:grid-cols-2">
+          <div className={`mt-12 ${showTenants ? "grid gap-8 sm:grid-cols-2" : "flex justify-center"}`}>
             <div
-              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${showTenants ? "" : "max-w-md w-full"} ${
                 inView ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: inView ? "300ms" : undefined }}
@@ -116,22 +117,24 @@ export function PlatformStats() {
               </p>
             </div>
 
-            <div
-              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
-                inView ? "animate-fade-in-up" : "opacity-0"
-              }`}
-              style={{ animationDelay: inView ? "450ms" : undefined }}
-            >
-              <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
-                {started ? <AnimatedCounter target={stats.totalTenants} /> : "0"}
+            {showTenants && (
+              <div
+                className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+                  inView ? "animate-fade-in-up" : "opacity-0"
+                }`}
+                style={{ animationDelay: inView ? "450ms" : undefined }}
+              >
+                <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
+                  {started ? <AnimatedCounter target={stats.totalTenants} /> : "0"}
+                </div>
+                <p className="mt-3 text-lg text-gray-600">
+                  Empresas confiam no Vitalis
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  Hospitais, clinicas e laboratorios
+                </p>
               </div>
-              <p className="mt-3 text-lg text-gray-600">
-                Empresas confiam no Vitalis
-              </p>
-              <p className="mt-1 text-sm text-gray-400">
-                Hospitais, clinicas e laboratorios
-              </p>
-            </div>
+            )}
           </div>
         </div>
       )}
