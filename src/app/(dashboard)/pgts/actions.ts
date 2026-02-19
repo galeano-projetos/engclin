@@ -6,9 +6,10 @@ import { generateText } from "@/lib/ai/openai";
 import { revalidatePath } from "next/cache";
 
 const SYSTEM_PROMPT =
-  "Voce e um engenheiro clinico senior especialista em gestao de equipamentos medicos hospitalares. " +
+  "Voce e um engenheiro clinico senior especialista em gestao de equipamentos medicos. " +
   "Elabore textos tecnicos para o Plano de Gerenciamento de Tecnologias em Saude (PGTS) conforme a RDC 509/2021 da Anvisa. " +
-  "Responda em portugues brasileiro, de forma clara e profissional. Nao use markdown. Nao use asteriscos ou caracteres especiais de formatacao.";
+  "Responda em portugues brasileiro, de forma clara e profissional. Nao use markdown. Nao use asteriscos ou caracteres especiais de formatacao. " +
+  "IMPORTANTE: Refira-se ao estabelecimento sempre como 'empresa' ou pelo nome proprio, nunca como 'hospital' (pois nem todo estabelecimento e um hospital).";
 
 interface TenantContext {
   name: string;
@@ -22,7 +23,7 @@ interface TenantContext {
 }
 
 function buildUserPrompt(sectionKey: string, ctx: TenantContext): string {
-  const base = `Hospital: ${ctx.name}\nCNPJ: ${ctx.cnpj}\nTotal de equipamentos: ${ctx.totalEquipments}\nTotal de unidades/setores: ${ctx.totalUnits}\nTotal de colaboradores: ${ctx.totalUsers}\nEquipamentos criticidade A (alta): ${ctx.criticalityA}\nEquipamentos criticidade B (media): ${ctx.criticalityB}\nEquipamentos criticidade C (baixa): ${ctx.criticalityC}\n\n`;
+  const base = `Empresa: ${ctx.name}\nCNPJ: ${ctx.cnpj}\nTotal de equipamentos: ${ctx.totalEquipments}\nTotal de unidades/setores: ${ctx.totalUnits}\nTotal de colaboradores: ${ctx.totalUsers}\nEquipamentos criticidade A (alta): ${ctx.criticalityA}\nEquipamentos criticidade B (media): ${ctx.criticalityB}\nEquipamentos criticidade C (baixa): ${ctx.criticalityC}\n\n`;
 
   const prompts: Record<string, string> = {
     objetivo:
@@ -34,7 +35,7 @@ function buildUserPrompt(sectionKey: string, ctx: TenantContext): string {
     estrutura_organizacional:
       base +
       "Elabore um texto para a secao 'Estrutura Organizacional' do PGTS. " +
-      "Descreva a estrutura recomendada para o setor de engenharia clinica do hospital, " +
+      "Descreva a estrutura recomendada para o setor de engenharia clinica da empresa, " +
       "incluindo responsabilidades do engenheiro clinico, tecnicos e coordenadores. Escreva 2-3 paragrafos.",
 
     etapas_gerenciamento:

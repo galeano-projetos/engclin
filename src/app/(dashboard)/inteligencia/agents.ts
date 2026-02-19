@@ -810,13 +810,17 @@ export async function runMarketResearchAgent(
   const research = await tryLLM(
     () =>
       manusGenerate(
-        "Voce e um consultor de equipamentos medicos hospitalares no Brasil. Pesquise informacoes sobre o equipamento solicitado e forneca: 1) Faixa de preco estimada no mercado brasileiro 2) Principais fornecedores 3) Modelos alternativos/substitutos 4) Pontos de atencao na compra. Responda em portugues brasileiro, de forma estruturada e concisa. Nao use markdown.",
+        "Voce e um consultor de equipamentos medicos hospitalares no Brasil. IMPORTANTE: Escreva o relatorio COMPLETO diretamente na sua resposta de texto. NAO crie arquivos, documentos ou anexos separados. Inclua TODAS as informacoes diretamente no texto da resposta. Responda em portugues brasileiro, de forma estruturada e concisa. Nao use markdown.",
         `Pesquise informacoes de mercado para:
 Equipamento: ${equipmentName}
 Marca: ${brand}
 Modelo: ${model}
 
-Forneca informacoes sobre precos, fornecedores no Brasil e alternativas de mercado.`
+Forneca diretamente no texto da sua resposta (sem criar documentos separados):
+1) Faixa de preco estimada no mercado brasileiro (novos e recondicionados)
+2) Principais fornecedores e distribuidores no Brasil
+3) Modelos alternativos e substitutos de outras marcas
+4) Pontos de atencao e recomendacoes para compra`
       ),
     "Pesquisa de mercado indisponivel no momento. Tente novamente mais tarde."
   );
@@ -834,8 +838,8 @@ export async function runComplianceAgent(
   const complianceAnalysis = await tryLLM(
     () =>
       manusGenerate(
-        "Voce e um especialista em regulamentacao sanitaria brasileira para equipamentos medicos. Conhece as normas da ANVISA, RDCs, normas ABNT e requisitos ONA. Responda em portugues brasileiro, de forma estruturada. Nao use markdown.",
-        `Para equipamentos do tipo "${equipmentType}" em ambiente hospitalar brasileiro, informe:
+        "Voce e um especialista em regulamentacao sanitaria brasileira para equipamentos medicos. Conhece as normas da ANVISA, RDCs, normas ABNT e requisitos ONA. IMPORTANTE: Escreva o relatorio COMPLETO diretamente na sua resposta de texto. NAO crie arquivos, documentos ou anexos separados. Responda em portugues brasileiro, de forma estruturada. Nao use markdown.",
+        `Para equipamentos do tipo "${equipmentType}" em ambiente hospitalar brasileiro, forneca diretamente no texto da sua resposta (sem criar documentos separados):
 1) Normas e RDCs da ANVISA aplicaveis
 2) Requisitos de manutencao preventiva obrigatoria
 3) Requisitos de calibracao e testes

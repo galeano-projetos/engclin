@@ -83,15 +83,21 @@ async function pollTask(taskId: string): Promise<ManusTaskResponse> {
 function extractText(task: ManusTaskResponse): string {
   if (!task.output) return "";
 
+  // Log full output structure for debugging
+  console.log("[Manus] Output messages:", task.output.length);
+  for (const msg of task.output) {
+    const types = msg.content?.map((c) => c.type).join(", ") || "no content";
+    console.log(`[Manus] role=${msg.role}, content types: [${types}]`);
+  }
+
   // Collect all text blocks from assistant messages
   const texts: string[] = [];
   for (const msg of task.output) {
     if (msg.role === "assistant" && msg.content) {
       for (const part of msg.content) {
-        if (part.type === "output_text" || part.type === "text") {
-          if (part.text?.trim()) {
-            texts.push(part.text.trim());
-          }
+        // Accept any content type that has text
+        if (part.text?.trim()) {
+          texts.push(part.text.trim());
         }
       }
     }
@@ -99,7 +105,14 @@ function extractText(task: ManusTaskResponse): string {
 
   if (texts.length === 0) return "";
 
-  // Return the longest text block (the actual research result, not the initial acknowledgment)
+  // If there are multiple text blocks, concatenate all except very short ones
+  // (short = likely just acknowledgments like "Com certeza! Vou pesquisar...")
+  const substantive = texts.filter((t) => t.length > 200);
+  if (substantive.length > 0) {
+    return substantive.join("\n\n");
+  }
+
+  // Fallback: return the longest text block
   return texts.reduce((a, b) => (b.length > a.length ? b : a), "");
 }
 
