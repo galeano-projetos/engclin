@@ -15,9 +15,9 @@ interface NiimbotPrintButtonProps {
 
 type PrintStatus = "idle" | "preview" | "connecting" | "printing" | "done" | "error";
 
-// Canvas dimensions: 70mm x 40mm at 8px/mm = 560x320
-const CANVAS_W = 560;
-const CANVAS_H = 320;
+// Canvas dimensions: 40mm x 70mm (portrait) at 8px/mm = 320x560
+const CANVAS_W = 320;
+const CANVAS_H = 560;
 
 export function NiimbotPrintButton({
   equipmentName,
@@ -42,6 +42,8 @@ export function NiimbotPrintButton({
       if (!qrDataUrl) return;
 
       const ctx = canvas.getContext("2d")!;
+      const centerX = CANVAS_W / 2;
+      const maxTextW = CANVAS_W - 32;
 
       // White background
       ctx.fillStyle = "#ffffff";
@@ -50,62 +52,60 @@ export function NiimbotPrintButton({
       // Load QR image
       const qrImg = await loadImage(qrDataUrl);
 
-      // Draw QR on left side (220x220, centered vertically)
-      const qrSize = 220;
-      const qrY = (CANVAS_H - qrSize) / 2;
-      ctx.drawImage(qrImg, 16, qrY, qrSize, qrSize);
+      // Draw QR centered at top
+      const qrSize = 200;
+      ctx.drawImage(qrImg, (CANVAS_W - qrSize) / 2, 16, qrSize, qrSize);
 
-      // Draw text on right side
-      const textX = 252;
-      const maxTextW = 290;
+      // All text centered below QR
+      ctx.textAlign = "center";
+      let textY = qrSize + 40;
+
+      // Equipment name (bold)
       ctx.fillStyle = "#000000";
-
-      // Equipment name (bold, max 2 lines)
-      ctx.font = "bold 24px Arial, sans-serif";
+      ctx.font = "bold 22px Arial, sans-serif";
       const nameLines = wrapText(ctx, equipmentName, maxTextW);
-      let textY = 45;
       for (const line of nameLines.slice(0, 2)) {
-        ctx.fillText(line, textX, textY);
-        textY += 30;
+        ctx.fillText(line, centerX, textY);
+        textY += 28;
       }
 
       // Brand / Model
       const brandModel = [brand, model].filter(Boolean).join(" ");
       if (brandModel) {
-        ctx.font = "18px Arial, sans-serif";
-        textY += 6;
+        ctx.font = "17px Arial, sans-serif";
+        textY += 4;
         const bmLines = wrapText(ctx, brandModel, maxTextW);
-        ctx.fillText(bmLines[0], textX, textY);
+        ctx.fillText(bmLines[0], centerX, textY);
         textY += 24;
       }
 
       // Serial Number
       if (serialNumber) {
         ctx.font = "16px Arial, sans-serif";
-        textY += 4;
-        ctx.fillText(`S/N: ${serialNumber}`, textX, textY);
+        textY += 2;
+        ctx.fillText(`S/N: ${serialNumber}`, centerX, textY);
         textY += 22;
       }
 
       // Patrimony
       if (patrimony) {
-        ctx.font = "18px Arial, sans-serif";
-        textY += 4;
-        ctx.fillText(`Pat: ${patrimony}`, textX, textY);
+        ctx.font = "17px Arial, sans-serif";
+        textY += 2;
+        ctx.fillText(`Pat: ${patrimony}`, centerX, textY);
         textY += 24;
       }
 
       // Unit name
       ctx.font = "15px Arial, sans-serif";
       ctx.fillStyle = "#555555";
-      textY += 6;
+      textY += 4;
       const unitLines = wrapText(ctx, unitName, maxTextW);
       for (const line of unitLines.slice(0, 2)) {
-        ctx.fillText(line, textX, textY);
+        ctx.fillText(line, centerX, textY);
         textY += 20;
       }
 
-      // Border around label
+      // Border around label (preview only)
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 2;
       ctx.strokeRect(1, 1, CANVAS_W - 2, CANVAS_H - 2);
@@ -211,7 +211,7 @@ export function NiimbotPrintButton({
   return (
     <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-700">Prévia da Etiqueta (70×40mm)</h4>
+        <h4 className="text-sm font-semibold text-gray-700">Prévia da Etiqueta (40×70mm)</h4>
         <button
           onClick={() => { setStatus("idle"); setErrorMsg(""); }}
           className="text-gray-400 hover:text-gray-600"
@@ -229,7 +229,7 @@ export function NiimbotPrintButton({
           ref={previewCanvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="h-auto w-full max-w-[420px]"
+          className="h-auto w-full max-w-[240px]"
         />
       </div>
 
