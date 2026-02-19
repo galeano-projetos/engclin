@@ -42,62 +42,79 @@ export function NiimbotPrintButton({
       if (!qrDataUrl) return;
 
       const ctx = canvas.getContext("2d")!;
-      const centerX = W / 2;
 
       // White background
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, W, H);
 
+      // Rotate 90° CCW: content is drawn in a virtual 320w x 560h space
+      // that gets rotated into the 560w x 320h canvas.
+      // After rotation, to read the label you tilt it 90° CW (QR top, text below).
+      ctx.save();
+      ctx.translate(0, H);
+      ctx.rotate(-Math.PI / 2);
+
+      // Now we draw in a virtual coordinate space: width=H(320), height=W(560)
+      const vW = H; // virtual width = 320
+      const vH = W; // virtual height = 560
+      const centerX = vW / 2;
+      const maxTextW = vW - 32;
+
       // Load QR image
       const qrImg = await loadImage(qrDataUrl);
 
-      // QR centered at top — 140x140 (fits in 320h with room for text)
-      const qrSize = 140;
-      ctx.drawImage(qrImg, (W - qrSize) / 2, 8, qrSize, qrSize);
+      // QR centered at top
+      const qrSize = 200;
+      ctx.drawImage(qrImg, (vW - qrSize) / 2, 16, qrSize, qrSize);
 
       // Text centered below QR
       ctx.textAlign = "center";
-      const maxTextW = W - 40;
-      let y = qrSize + 20;
+      let y = qrSize + 40;
 
       // Equipment name (bold)
       ctx.fillStyle = "#000000";
-      ctx.font = "bold 20px Arial, sans-serif";
+      ctx.font = "bold 22px Arial, sans-serif";
       const nameLines = wrapText(ctx, equipmentName, maxTextW);
       for (const line of nameLines.slice(0, 2)) {
         ctx.fillText(line, centerX, y);
-        y += 24;
+        y += 28;
       }
 
       // Brand / Model
       const brandModel = [brand, model].filter(Boolean).join(" ");
       if (brandModel) {
-        ctx.font = "15px Arial, sans-serif";
-        y += 2;
+        ctx.font = "17px Arial, sans-serif";
+        y += 4;
         const bmLines = wrapText(ctx, brandModel, maxTextW);
         ctx.fillText(bmLines[0], centerX, y);
-        y += 20;
+        y += 24;
       }
 
-      // S/N and Pat on the same line if both exist, otherwise separate
-      const infoParts: string[] = [];
-      if (serialNumber) infoParts.push(`S/N: ${serialNumber}`);
-      if (patrimony) infoParts.push(`Pat: ${patrimony}`);
-
-      if (infoParts.length > 0) {
-        ctx.font = "14px Arial, sans-serif";
+      // Serial Number
+      if (serialNumber) {
+        ctx.font = "16px Arial, sans-serif";
         y += 2;
-        ctx.fillText(infoParts.join("  •  "), centerX, y);
-        y += 20;
+        ctx.fillText(`S/N: ${serialNumber}`, centerX, y);
+        y += 22;
+      }
+
+      // Patrimony
+      if (patrimony) {
+        ctx.font = "17px Arial, sans-serif";
+        y += 2;
+        ctx.fillText(`Pat: ${patrimony}`, centerX, y);
+        y += 24;
       }
 
       // Unit name
-      ctx.font = "13px Arial, sans-serif";
+      ctx.font = "15px Arial, sans-serif";
       ctx.fillStyle = "#666666";
-      y += 2;
+      y += 4;
       ctx.fillText(unitName, centerX, y);
 
-      // Border (preview only — thin gray)
+      ctx.restore();
+
+      // Border (preview)
       ctx.strokeStyle = "#d1d5db";
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, W, H);
