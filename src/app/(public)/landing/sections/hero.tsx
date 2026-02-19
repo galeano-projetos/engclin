@@ -49,7 +49,7 @@ export function Hero() {
           style={{ animation: "fade-in-up 0.6s ease-out 0.5s both" }}
         >
           <a
-            href="/registro"
+            href="#precos"
             className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-teal-600/20 transition-all hover:bg-teal-700 hover:shadow-teal-700/25"
           >
             Comece seus 30 Dias Grátis
