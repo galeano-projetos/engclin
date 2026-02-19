@@ -200,17 +200,17 @@ export interface PgtsDocumentProps {
 }
 
 const SECTION_LABELS: Record<string, string> = {
-  identificacao: "1. Identificacao do Estabelecimento",
+  identificacao: "1. Identifica\u00e7\u00e3o do Estabelecimento",
   objetivo: "2. Objetivo do Plano",
   estrutura_organizacional: "3. Estrutura Organizacional",
-  inventario: "4. Inventario de Tecnologias",
+  inventario: "4. Invent\u00e1rio de Tecnologias",
   etapas_gerenciamento: "5. Etapas do Gerenciamento",
   gerenciamento_riscos: "6. Gerenciamento de Riscos",
   rastreabilidade: "7. Rastreabilidade",
-  capacitacao: "8. Capacitacao e Treinamento",
-  infraestrutura: "9. Infraestrutura Fisica",
-  documentacao: "10. Documentacao e Registros",
-  avaliacao_anual: "11. Avaliacao Anual",
+  capacitacao: "8. Capacita\u00e7\u00e3o e Treinamento",
+  infraestrutura: "9. Infraestrutura F\u00edsica",
+  documentacao: "10. Documenta\u00e7\u00e3o e Registros",
+  avaliacao_anual: "11. Avalia\u00e7\u00e3o Anual",
   anexos: "12. Anexos",
 };
 
@@ -226,10 +226,10 @@ function Header({ hospitalName }: { hospitalName: string }) {
 function Footer() {
   return (
     <View style={styles.footer} fixed>
-      <Text style={styles.footerText}>Gerado pelo Vitalis — Sistema de Gestao de Engenharia Clinica</Text>
+      <Text style={styles.footerText}>Gerado pelo Vitalis {"\u2014"} Sistema de Gest{"\u00e3"}o de Engenharia Cl{"\u00ed"}nica</Text>
       <Text
         style={styles.footerText}
-        render={({ pageNumber, totalPages }) => `Pagina ${pageNumber} de ${totalPages}`}
+        render={({ pageNumber, totalPages }) => `P\u00e1gina ${pageNumber} de ${totalPages}`}
       />
     </View>
   );
@@ -241,7 +241,7 @@ function EquipmentTable({ equipments }: { equipments: PgtsEquipment[] }) {
   return (
     <View>
       <View style={styles.tableHeader}>
-        {["Nome", "Marca", "Modelo", "Patrimonio", "N. Serie", "Crit.", "Status"].map(
+        {["Nome", "Marca", "Modelo", "Patrim\u00f4nio", "N\u00ba S\u00e9rie", "Crit.", "Status"].map(
           (h, i) => (
             <Text key={h} style={[styles.tableCellHeader, { width: colWidths[i] }]}>
               {h}
@@ -286,11 +286,11 @@ export function PgtsDocument(props: PgtsDocumentProps) {
         {/* Cover */}
         <View style={{ marginTop: 40, marginBottom: 30 }}>
           <Text style={styles.title}>
-            Plano de Gerenciamento de{"\n"}Tecnologias em Saude
+            Plano de Gerenciamento de{"\n"}Tecnologias em Sa{"\u00fa"}de
           </Text>
           <Text style={styles.subtitle}>{hospitalName}</Text>
           <Text style={[styles.subtitle, { fontSize: 9 }]}>
-            Conforme RDC n. 509/2021 — Anvisa
+            Conforme RDC n{"\u00ba"} 509/2021 {"\u2014"} Anvisa
           </Text>
           <Text style={[styles.subtitle, { fontSize: 8, marginTop: 8 }]}>
             Gerado em {generatedAt} por {generatedByName}
@@ -318,13 +318,13 @@ export function PgtsDocument(props: PgtsDocumentProps) {
         {/* Section 2 — Objective */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.objetivo}</Text>
         <Text style={styles.sectionText}>
-          {sections.objetivo || "Secao nao preenchida."}
+          {sections.objetivo || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 3 — Organizational Structure */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.estrutura_organizacional}</Text>
         <Text style={styles.sectionText}>
-          {sections.estrutura_organizacional || "Secao nao preenchida."}
+          {sections.estrutura_organizacional || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 4 — Technology Inventory */}
@@ -361,7 +361,7 @@ export function PgtsDocument(props: PgtsDocumentProps) {
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryNumber}>{maintenanceSummary.calibracoes}</Text>
-            <Text style={styles.summaryLabel}>Calibracoes</Text>
+            <Text style={styles.summaryLabel}>Calibra{"\u00e7\u00f5"}es</Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryNumber}>{maintenanceSummary.tse}</Text>
@@ -369,19 +369,19 @@ export function PgtsDocument(props: PgtsDocumentProps) {
           </View>
         </View>
         <Text style={styles.sectionText}>
-          {sections.etapas_gerenciamento || "Secao nao preenchida."}
+          {sections.etapas_gerenciamento || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 6 — Risk Management */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.gerenciamento_riscos}</Text>
         <Text style={styles.sectionText}>
-          {sections.gerenciamento_riscos || "Secao nao preenchida."}
+          {sections.gerenciamento_riscos || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 7 — Traceability */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.rastreabilidade}</Text>
         <Text style={styles.sectionText}>
-          {sections.rastreabilidade || "Secao nao preenchida."}
+          {sections.rastreabilidade || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 8 — Training */}
@@ -393,42 +393,42 @@ export function PgtsDocument(props: PgtsDocumentProps) {
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryNumber}>{trainingSummary.completions}</Text>
-            <Text style={styles.summaryLabel}>Conclusoes</Text>
+            <Text style={styles.summaryLabel}>Conclus{"\u00f5"}es</Text>
           </View>
         </View>
         <Text style={styles.sectionText}>
-          {sections.capacitacao || "Secao nao preenchida."}
+          {sections.capacitacao || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 9 — Physical Infrastructure */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.infraestrutura}</Text>
         <Text style={styles.sectionText}>
-          {sections.infraestrutura || "Secao nao preenchida."}
+          {sections.infraestrutura || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 10 — Documentation */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.documentacao}</Text>
         <Text style={styles.sectionText}>
-          {sections.documentacao || "Secao nao preenchida."}
+          {sections.documentacao || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 11 — Annual Evaluation */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.avaliacao_anual}</Text>
         <Text style={styles.sectionText}>
-          {sections.avaliacao_anual || "Secao nao preenchida."}
+          {sections.avaliacao_anual || "Se\u00e7\u00e3o n\u00e3o preenchida."}
         </Text>
 
         {/* Section 12 — Annexes */}
         <Text style={styles.sectionTitle}>{SECTION_LABELS.anexos}</Text>
         <Text style={styles.sectionText}>
-          {sections.anexos || "Os anexos complementares ao PGTS devem ser arquivados junto a este documento."}
+          {sections.anexos || "Os anexos complementares ao PGTS devem ser arquivados junto a este documento. Incluem-se certificados de calibra\u00e7\u00e3o, contratos de manuten\u00e7\u00e3o, laudos t\u00e9cnicos e demais documentos de suporte."}
         </Text>
 
         {/* Signature */}
         <View style={styles.signatureSection}>
           <View style={{ height: 60 }} />
           <View style={styles.signatureLine} />
-          <Text style={styles.signatureLabel}>Responsavel Tecnico</Text>
+          <Text style={styles.signatureLabel}>Respons{"\u00e1"}vel T{"\u00e9"}cnico</Text>
           <Text style={[styles.signatureLabel, { marginTop: 2 }]}>
             {hospitalName}
           </Text>

@@ -136,6 +136,76 @@ export async function suggestSectionText(
   }
 }
 
+// Sections that should be auto-filled with IA if empty
+const TEXT_SECTION_KEYS = [
+  "objetivo",
+  "estrutura_organizacional",
+  "etapas_gerenciamento",
+  "gerenciamento_riscos",
+  "rastreabilidade",
+  "capacitacao",
+  "infraestrutura",
+  "documentacao",
+  "avaliacao_anual",
+];
+
+async function autoFillEmptySections(
+  sections: Record<string, string>,
+  tenantId: string
+): Promise<Record<string, string>> {
+  if (!process.env.OPENAI_API_KEY) return sections;
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, cnpj: true },
+  });
+  if (!tenant) return sections;
+
+  const [totalEquipments, totalUnits, totalUsers, critA, critB, critC] =
+    await Promise.all([
+      prisma.equipment.count({ where: { tenantId } }),
+      prisma.unit.count({ where: { tenantId } }),
+      prisma.user.count({ where: { tenantId, active: true } }),
+      prisma.equipment.count({ where: { tenantId, criticality: "A" } }),
+      prisma.equipment.count({ where: { tenantId, criticality: "B" } }),
+      prisma.equipment.count({ where: { tenantId, criticality: "C" } }),
+    ]);
+
+  const ctx: TenantContext = {
+    name: tenant.name,
+    cnpj: tenant.cnpj,
+    totalEquipments,
+    totalUnits,
+    totalUsers,
+    criticalityA: critA,
+    criticalityB: critB,
+    criticalityC: critC,
+  };
+
+  const filled = { ...sections };
+
+  // Generate text for all empty sections in parallel
+  const emptyKeys = TEXT_SECTION_KEYS.filter((k) => !filled[k]?.trim());
+  if (emptyKeys.length === 0) return filled;
+
+  console.log(`[PGTS] Auto-preenchendo ${emptyKeys.length} se\u00e7\u00f5es com IA...`);
+
+  const results = await Promise.allSettled(
+    emptyKeys.map(async (key) => {
+      const text = await generateText(SYSTEM_PROMPT, buildUserPrompt(key, ctx));
+      return { key, text };
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value.text) {
+      filled[result.value.key] = result.value.text;
+    }
+  }
+
+  return filled;
+}
+
 export async function generatePgts(
   sections: Record<string, string>
 ): Promise<{ id?: string; error?: string }> {
@@ -147,6 +217,9 @@ export async function generatePgts(
       select: { name: true },
     });
 
+    // Auto-fill empty text sections with IA
+    const filledSections = await autoFillEmptySections(sections, tenantId);
+
     // Calculate next version
     const lastVersion = await prisma.pgtsVersion.findFirst({
       where: { tenantId },
@@ -157,7 +230,7 @@ export async function generatePgts(
 
     // Generate PDF
     const { generatePgtsPdf } = await import("@/lib/pgts/generate-pdf");
-    const pdfBuffer = await generatePgtsPdf(tenantId, sections, user?.name ?? "Usuario");
+    const pdfBuffer = await generatePgtsPdf(tenantId, filledSections, user?.name ?? "Usu\u00e1rio");
 
     const fileName = `PGTS_v${nextVersion}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
@@ -168,7 +241,7 @@ export async function generatePgts(
         generatedBy: userId,
         fileName,
         fileData: Buffer.from(pdfBuffer),
-        sections,
+        sections: filledSections,
       },
     });
 

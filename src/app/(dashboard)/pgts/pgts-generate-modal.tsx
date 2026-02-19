@@ -42,7 +42,7 @@ interface SectionConfig {
 const SECTIONS: SectionConfig[] = [
   {
     key: "identificacao",
-    label: "1. Identificacao do Estabelecimento",
+    label: "1. Identifica\u00e7\u00e3o do Estabelecimento",
     type: "auto",
     description: "Dados do estabelecimento preenchidos automaticamente.",
   },
@@ -56,13 +56,13 @@ const SECTIONS: SectionConfig[] = [
     key: "estrutura_organizacional",
     label: "3. Estrutura Organizacional",
     type: "text",
-    description: "Descreva a estrutura do setor de engenharia clinica.",
+    description: "Descreva a estrutura do setor de engenharia cl\u00ednica.",
   },
   {
     key: "inventario",
-    label: "4. Inventario de Tecnologias",
+    label: "4. Invent\u00e1rio de Tecnologias",
     type: "auto",
-    description: "Inventario de equipamentos preenchido automaticamente a partir do cadastro.",
+    description: "Invent\u00e1rio de equipamentos preenchido automaticamente a partir do cadastro.",
   },
   {
     key: "etapas_gerenciamento",
@@ -74,7 +74,7 @@ const SECTIONS: SectionConfig[] = [
     key: "gerenciamento_riscos",
     label: "6. Gerenciamento de Riscos",
     type: "text",
-    description: "Descreva a gestao de riscos e criticidade dos equipamentos.",
+    description: "Descreva a gest\u00e3o de riscos e criticidade dos equipamentos.",
   },
   {
     key: "rastreabilidade",
@@ -84,33 +84,33 @@ const SECTIONS: SectionConfig[] = [
   },
   {
     key: "capacitacao",
-    label: "8. Capacitacao e Treinamento",
+    label: "8. Capacita\u00e7\u00e3o e Treinamento",
     type: "text",
     description: "Descreva o programa de treinamento dos operadores.",
   },
   {
     key: "infraestrutura",
-    label: "9. Infraestrutura Fisica",
+    label: "9. Infraestrutura F\u00edsica",
     type: "text",
     description: "Descreva os requisitos de infraestrutura.",
   },
   {
     key: "documentacao",
-    label: "10. Documentacao e Registros",
+    label: "10. Documenta\u00e7\u00e3o e Registros",
     type: "text",
-    description: "Descreva o sistema de documentacao e registros.",
+    description: "Descreva o sistema de documenta\u00e7\u00e3o e registros.",
   },
   {
     key: "avaliacao_anual",
-    label: "11. Avaliacao Anual",
+    label: "11. Avalia\u00e7\u00e3o Anual",
     type: "text",
-    description: "Descreva indicadores e metricas de avaliacao anual.",
+    description: "Descreva indicadores e m\u00e9tricas de avalia\u00e7\u00e3o anual.",
   },
   {
     key: "anexos",
     label: "12. Anexos",
     type: "auto",
-    description: "Espaco reservado para anexos complementares.",
+    description: "Espa\u00e7o reservado para anexos complementares.",
   },
 ];
 
@@ -124,10 +124,13 @@ export function PgtsGenerateModal({
 }: PgtsGenerateModalProps) {
   const [sections, setSections] = useState<Record<string, string>>({});
   const [suggestingKey, setSuggestingKey] = useState<string | null>(null);
+  const [fillingAll, setFillingAll] = useState(false);
   const [generating, startGenerating] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState(0);
+
+  const textSectionKeys = SECTIONS.filter((s) => s.type === "text").map((s) => s.key);
 
   function updateSection(key: string, value: string) {
     setSections((prev) => ({ ...prev, [key]: value }));
@@ -147,6 +150,37 @@ export function PgtsGenerateModal({
       setError("Erro ao comunicar com a IA.");
     } finally {
       setSuggestingKey(null);
+    }
+  }
+
+  async function handleFillAll() {
+    setFillingAll(true);
+    setError(null);
+    const emptyKeys = textSectionKeys.filter((k) => !sections[k]?.trim());
+    if (emptyKeys.length === 0) {
+      setFillingAll(false);
+      return;
+    }
+    try {
+      const results = await Promise.allSettled(
+        emptyKeys.map(async (key) => {
+          const result = await suggestSectionText(key);
+          return { key, result };
+        })
+      );
+      setSections((prev) => {
+        const updated = { ...prev };
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value.result.text) {
+            updated[r.value.key] = r.value.result.text;
+          }
+        }
+        return updated;
+      });
+    } catch {
+      setError("Erro ao preencher se\u00e7\u00f5es com IA.");
+    } finally {
+      setFillingAll(false);
     }
   }
 
@@ -181,7 +215,7 @@ export function PgtsGenerateModal({
           </svg>
           <h2 className="mt-4 text-xl font-bold text-gray-900">PGTS Gerado com Sucesso!</h2>
           <p className="mt-2 text-sm text-gray-500">
-            O documento foi salvo e esta disponivel para download na tabela de versoes.
+            O documento foi salvo e est{"\u00e1"} dispon{"\u00ed"}vel para download na tabela de vers{"\u00f5"}es.
           </p>
           <div className="mt-6 flex gap-3 justify-center">
             <a
@@ -205,17 +239,27 @@ export function PgtsGenerateModal({
       <div className="flex items-center justify-between border-b bg-white px-6 py-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Gerar Novo PGTS</h2>
-          <p className="text-sm text-gray-500">Preencha as secoes do documento</p>
+          <p className="text-sm text-gray-500">
+            Preencha as se{"\u00e7\u00f5"}es ou clique em &quot;Preencher tudo com IA&quot;. Se{"\u00e7\u00f5"}es vazias ser{"\u00e3"}o preenchidas automaticamente.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Button
+            variant="secondary"
+            onClick={handleFillAll}
+            loading={fillingAll}
+            disabled={fillingAll || generating}
+          >
+            {fillingAll ? "Preenchendo..." : "Preencher tudo com IA"}
+          </Button>
+          <Button
             onClick={handleGenerate}
             loading={generating}
-            disabled={generating}
+            disabled={generating || fillingAll}
           >
             {generating ? "Gerando PDF..." : "Gerar PGTS"}
           </Button>
-          <Button variant="ghost" onClick={onClose} disabled={generating}>
+          <Button variant="ghost" onClick={onClose} disabled={generating || fillingAll}>
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
