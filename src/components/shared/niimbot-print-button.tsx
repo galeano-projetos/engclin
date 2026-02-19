@@ -15,12 +15,9 @@ interface NiimbotPrintButtonProps {
 
 type PrintStatus = "idle" | "preview" | "connecting" | "printing" | "done" | "error";
 
-// Preview canvas: portrait (40x70mm at 8px/mm = 320x560)
-const PREVIEW_W = 320;
-const PREVIEW_H = 560;
-// Print canvas: landscape 70x40mm (portrait rotated 90° CCW)
-const PRINT_W = 560;
-const PRINT_H = 320;
+// 70mm x 40mm at 8px/mm = 560 x 320 (landscape)
+const W = 560;
+const H = 320;
 
 export function NiimbotPrintButton({
   equipmentName,
@@ -34,7 +31,7 @@ export function NiimbotPrintButton({
   const [status, setStatus] = useState<PrintStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [hasBluetooth, setHasBluetooth] = useState(false);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     setHasBluetooth(typeof navigator !== "undefined" && !!navigator.bluetooth);
@@ -45,81 +42,73 @@ export function NiimbotPrintButton({
       if (!qrDataUrl) return;
 
       const ctx = canvas.getContext("2d")!;
-      const centerX = PREVIEW_W / 2;
-      const maxTextW = PREVIEW_W - 32;
+      const centerX = W / 2;
 
       // White background
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
+      ctx.fillRect(0, 0, W, H);
 
       // Load QR image
       const qrImg = await loadImage(qrDataUrl);
 
-      // Draw QR centered at top
-      const qrSize = 200;
-      ctx.drawImage(qrImg, (PREVIEW_W - qrSize) / 2, 16, qrSize, qrSize);
+      // QR centered at top — 140x140 (fits in 320h with room for text)
+      const qrSize = 140;
+      ctx.drawImage(qrImg, (W - qrSize) / 2, 8, qrSize, qrSize);
 
-      // All text centered below QR
+      // Text centered below QR
       ctx.textAlign = "center";
-      let textY = qrSize + 40;
+      const maxTextW = W - 40;
+      let y = qrSize + 20;
 
       // Equipment name (bold)
       ctx.fillStyle = "#000000";
-      ctx.font = "bold 22px Arial, sans-serif";
+      ctx.font = "bold 20px Arial, sans-serif";
       const nameLines = wrapText(ctx, equipmentName, maxTextW);
       for (const line of nameLines.slice(0, 2)) {
-        ctx.fillText(line, centerX, textY);
-        textY += 28;
+        ctx.fillText(line, centerX, y);
+        y += 24;
       }
 
       // Brand / Model
       const brandModel = [brand, model].filter(Boolean).join(" ");
       if (brandModel) {
-        ctx.font = "17px Arial, sans-serif";
-        textY += 4;
+        ctx.font = "15px Arial, sans-serif";
+        y += 2;
         const bmLines = wrapText(ctx, brandModel, maxTextW);
-        ctx.fillText(bmLines[0], centerX, textY);
-        textY += 24;
+        ctx.fillText(bmLines[0], centerX, y);
+        y += 20;
       }
 
-      // Serial Number
-      if (serialNumber) {
-        ctx.font = "16px Arial, sans-serif";
-        textY += 2;
-        ctx.fillText(`S/N: ${serialNumber}`, centerX, textY);
-        textY += 22;
-      }
+      // S/N and Pat on the same line if both exist, otherwise separate
+      const infoParts: string[] = [];
+      if (serialNumber) infoParts.push(`S/N: ${serialNumber}`);
+      if (patrimony) infoParts.push(`Pat: ${patrimony}`);
 
-      // Patrimony
-      if (patrimony) {
-        ctx.font = "17px Arial, sans-serif";
-        textY += 2;
-        ctx.fillText(`Pat: ${patrimony}`, centerX, textY);
-        textY += 24;
+      if (infoParts.length > 0) {
+        ctx.font = "14px Arial, sans-serif";
+        y += 2;
+        ctx.fillText(infoParts.join("  •  "), centerX, y);
+        y += 20;
       }
 
       // Unit name
-      ctx.font = "15px Arial, sans-serif";
-      ctx.fillStyle = "#555555";
-      textY += 4;
-      const unitLines = wrapText(ctx, unitName, maxTextW);
-      for (const line of unitLines.slice(0, 2)) {
-        ctx.fillText(line, centerX, textY);
-        textY += 20;
-      }
+      ctx.font = "13px Arial, sans-serif";
+      ctx.fillStyle = "#666666";
+      y += 2;
+      ctx.fillText(unitName, centerX, y);
 
-      // Border around label (preview only)
-      ctx.strokeStyle = "#e5e7eb";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, PREVIEW_W - 2, PREVIEW_H - 2);
+      // Border (preview only — thin gray)
+      ctx.strokeStyle = "#d1d5db";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, W, H);
     },
     [qrDataUrl, equipmentName, brand, model, serialNumber, patrimony, unitName]
   );
 
-  // Draw preview when entering preview state
+  // Draw preview when status changes to preview
   useEffect(() => {
-    if (status === "preview" && previewCanvasRef.current) {
-      drawLabel(previewCanvasRef.current);
+    if (status === "preview" && previewRef.current) {
+      drawLabel(previewRef.current);
     }
   }, [status, drawLabel]);
 
@@ -148,26 +137,15 @@ export function NiimbotPrintButton({
 
       client = new NiimbotBluetoothClient();
       await client.connect();
-
       setStatus("printing");
 
-      // 1. Draw label in portrait (320x560)
-      const portraitCanvas = document.createElement("canvas");
-      portraitCanvas.width = PREVIEW_W;
-      portraitCanvas.height = PREVIEW_H;
-      await drawLabel(portraitCanvas);
+      // Same canvas as preview
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      await drawLabel(canvas);
 
-      // 2. Rotate 90° CCW into landscape (560x320) for the printer
-      const printCanvas = document.createElement("canvas");
-      printCanvas.width = PRINT_W;
-      printCanvas.height = PRINT_H;
-      const pctx = printCanvas.getContext("2d")!;
-      pctx.translate(0, PRINT_H);
-      pctx.rotate(-Math.PI / 2);
-      pctx.drawImage(portraitCanvas, 0, 0);
-
-      // Encode and print
-      const encoded = ImageEncoder.encodeCanvas(printCanvas, "left");
+      const encoded = ImageEncoder.encodeCanvas(canvas, "left");
       const printTaskName = client.getPrintTaskType() ?? "B1";
       const printTask = client.abstraction.newPrintTask(printTaskName, {
         totalPages: 1,
@@ -192,13 +170,13 @@ export function NiimbotPrintButton({
         try {
           await client.disconnect();
         } catch {
-          // ignore disconnect errors
+          // ignore
         }
       }
     }
   }
 
-  // Idle state: just show the button
+  // Idle
   if (status === "idle") {
     return (
       <Button onClick={handleShowPreview} variant="secondary" disabled={!qrDataUrl}>
@@ -207,7 +185,7 @@ export function NiimbotPrintButton({
     );
   }
 
-  // Done state
+  // Done
   if (status === "done") {
     return (
       <Button variant="secondary" disabled>
@@ -219,7 +197,7 @@ export function NiimbotPrintButton({
     );
   }
 
-  // Preview / connecting / printing / error states: show label preview + actions
+  // Preview / connecting / printing / error
   return (
     <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -235,13 +213,13 @@ export function NiimbotPrintButton({
         </button>
       </div>
 
-      {/* Canvas preview scaled to fit */}
+      {/* Canvas preview — landscape, scaled to container */}
       <div className="flex justify-center rounded border border-gray-300 bg-white p-2">
         <canvas
-          ref={previewCanvasRef}
-          width={PREVIEW_W}
-          height={PREVIEW_H}
-          className="h-auto w-full max-w-[240px]"
+          ref={previewRef}
+          width={W}
+          height={H}
+          className="h-auto w-full max-w-[480px]"
         />
       </div>
 
