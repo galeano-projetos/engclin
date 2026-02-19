@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 const publicPaths = ["/", "/login", "/registro", "/api/auth", "/forgot-password", "/reset-password", "/trocar-senha"];
 const publicPrefixes = ["/api/auth/", "/equipamento/"];
 // Rotas publicas exatas (nao prefixos)
-const publicExact = ["/api/alerts/check"];
+const publicExact = ["/api/alerts/check", "/api/stats"];
 
 function isPublicPath(pathname: string): boolean {
   if (publicPaths.includes(pathname)) return true;
