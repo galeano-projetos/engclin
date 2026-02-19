@@ -11,6 +11,7 @@ interface EquipmentFormData {
   brand?: string;
   model?: string;
   serialNumber?: string;
+  anvisaRegistry?: string;
   patrimony?: string;
   unitId: string;
   equipmentTypeId?: string;
@@ -32,6 +33,7 @@ function parseFormData(formData: FormData): EquipmentFormData {
     brand: (formData.get("brand") as string) || undefined,
     model: (formData.get("model") as string) || undefined,
     serialNumber: (formData.get("serialNumber") as string) || undefined,
+    anvisaRegistry: (formData.get("anvisaRegistry") as string) || undefined,
     patrimony: (formData.get("patrimony") as string) || undefined,
     unitId: formData.get("unitId") as string,
     equipmentTypeId: (formData.get("equipmentTypeId") as string) || undefined,
@@ -90,6 +92,7 @@ export async function createEquipment(formData: FormData) {
       brand: data.brand,
       model: data.model,
       serialNumber: data.serialNumber,
+      anvisaRegistry: data.anvisaRegistry,
       patrimony: data.patrimony,
       criticality: data.criticality,
       status: data.status,
@@ -159,6 +162,7 @@ export async function updateEquipment(id: string, formData: FormData) {
       brand: data.brand,
       model: data.model,
       serialNumber: data.serialNumber,
+      anvisaRegistry: data.anvisaRegistry || null,
       patrimony: data.patrimony,
       criticality: data.criticality,
       status: data.status,

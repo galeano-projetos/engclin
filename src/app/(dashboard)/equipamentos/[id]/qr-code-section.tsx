@@ -10,6 +10,7 @@ interface QrCodeSectionProps {
   brand: string | null;
   model: string | null;
   serialNumber: string | null;
+  anvisaRegistry: string | null;
   patrimony: string | null;
   unitName: string;
 }
@@ -20,6 +21,7 @@ export function QrCodeSection({
   brand,
   model,
   serialNumber,
+  anvisaRegistry,
   patrimony,
   unitName,
 }: QrCodeSectionProps) {
@@ -107,6 +109,7 @@ export function QrCodeSection({
           <h1>${equipmentName}</h1>
           ${brandModel ? `<p class="info">${brandModel}</p>` : ""}
           ${serialNumber ? `<p class="info"><strong>S/N:</strong> ${serialNumber}</p>` : ""}
+          ${anvisaRegistry ? `<p class="info"><strong>Reg. ANVISA:</strong> ${anvisaRegistry}</p>` : ""}
           ${patrimony ? `<p class="info"><strong>Pat:</strong> ${patrimony}</p>` : ""}
           <p class="info" style="color:#555; margin-top:2mm;">${unitName}</p>
         </div>
@@ -183,6 +186,7 @@ export function QrCodeSection({
                   brand={brand}
                   model={model}
                   serialNumber={serialNumber}
+                  anvisaRegistry={anvisaRegistry}
                   patrimony={patrimony}
                   unitName={unitName}
                   qrDataUrl={qrDataUrl}

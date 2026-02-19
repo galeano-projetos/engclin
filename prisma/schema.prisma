@@ -231,6 +231,7 @@ model Equipment {
   brand            String?         // Marca
   model            String?         // Modelo
   serialNumber     String?         // Numero de serie
+  anvisaRegistry   String?         // Registro ANVISA do equipamento
   patrimony        String?         // Patrimonio
   criticality      Criticality     @default(C)
   status           EquipmentStatus @default(ATIVO)

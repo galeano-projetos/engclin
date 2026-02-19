@@ -23,6 +23,7 @@ interface EquipmentData {
   brand: string | null;
   model: string | null;
   serialNumber: string | null;
+  anvisaRegistry: string | null;
   patrimony: string | null;
   unitId: string;
   criticality: string;
@@ -140,6 +141,13 @@ export function EquipmentForm({
             label="Numero de Serie"
             placeholder="Ex: SN-001234"
             defaultValue={equipment?.serialNumber || ""}
+          />
+          <Input
+            id="anvisaRegistry"
+            name="anvisaRegistry"
+            label="Registro ANVISA"
+            placeholder="Ex: 80000000001"
+            defaultValue={equipment?.anvisaRegistry || ""}
           />
           <Input
             id="patrimony"

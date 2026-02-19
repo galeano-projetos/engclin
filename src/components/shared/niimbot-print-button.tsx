@@ -8,6 +8,7 @@ interface NiimbotPrintButtonProps {
   brand: string | null;
   model: string | null;
   serialNumber: string | null;
+  anvisaRegistry: string | null;
   patrimony: string | null;
   unitName: string;
   qrDataUrl: string | null;
@@ -24,6 +25,7 @@ export function NiimbotPrintButton({
   brand,
   model,
   serialNumber,
+  anvisaRegistry,
   patrimony,
   unitName,
   qrDataUrl,
@@ -98,6 +100,14 @@ export function NiimbotPrintButton({
         y += 22;
       }
 
+      // ANVISA Registry
+      if (anvisaRegistry) {
+        ctx.font = "16px Arial, sans-serif";
+        y += 2;
+        ctx.fillText(`Reg. ANVISA: ${anvisaRegistry}`, centerX, y);
+        y += 22;
+      }
+
       // Patrimony
       if (patrimony) {
         ctx.font = "17px Arial, sans-serif";
@@ -136,7 +146,7 @@ export function NiimbotPrintButton({
       ctx.lineWidth = 1;
       ctx.strokeRect(0, 0, W, H);
     },
-    [qrDataUrl, equipmentName, brand, model, serialNumber, patrimony, unitName]
+    [qrDataUrl, equipmentName, brand, model, serialNumber, anvisaRegistry, patrimony, unitName]
   );
 
   // Draw preview when status changes to preview

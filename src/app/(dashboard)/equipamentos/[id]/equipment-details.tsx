@@ -15,6 +15,7 @@ interface SerializedEquipment {
   brand: string | null;
   model: string | null;
   serialNumber: string | null;
+  anvisaRegistry: string | null;
   patrimony: string | null;
   unitId: string;
   unitName: string;
@@ -127,6 +128,7 @@ export function EquipmentDetails({
             brand: equipment.brand,
             model: equipment.model,
             serialNumber: equipment.serialNumber,
+            anvisaRegistry: equipment.anvisaRegistry,
             patrimony: equipment.patrimony,
             unitId: equipment.unitId,
             criticality: equipment.criticality,
@@ -193,6 +195,7 @@ export function EquipmentDetails({
           <InfoRow label="Marca" value={equipment.brand} />
           <InfoRow label="Modelo" value={equipment.model} />
           <InfoRow label="Numero de Serie" value={equipment.serialNumber} />
+          <InfoRow label="Registro ANVISA" value={equipment.anvisaRegistry} />
           <InfoRow label="Patrimonio" value={equipment.patrimony} />
           <InfoRow label="Setor" value={equipment.unitName} />
           {equipment.equipmentTypeName && (
@@ -262,6 +265,7 @@ export function EquipmentDetails({
           brand={equipment.brand}
           model={equipment.model}
           serialNumber={equipment.serialNumber}
+          anvisaRegistry={equipment.anvisaRegistry}
           patrimony={equipment.patrimony}
           unitName={equipment.unitName}
         />
