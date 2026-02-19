@@ -118,8 +118,8 @@ export function NiimbotPrintButton({
           ? `${window.location.origin}/vitalis-logo-label.png`
           : "/vitalis-logo-label.png";
         const logoImg = await loadImage(logoUrl);
-        const logoMaxW = 160;
-        const logoMaxH = 50;
+        const logoMaxW = 480;
+        const logoMaxH = 150;
         const scale = Math.min(logoMaxW / logoImg.width, logoMaxH / logoImg.height);
         const logoW = logoImg.width * scale;
         const logoH = logoImg.height * scale;
