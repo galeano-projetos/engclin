@@ -113,7 +113,7 @@ export default async function FisicaMedicaPage({ searchParams }: PageProps) {
             {" "}(RDC 611 / IN 90-96)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <SyncSeproradButton />
           <Link href="/fisica-medica/novo">
             <Button>Novo Teste</Button>

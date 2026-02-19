@@ -24,6 +24,19 @@ export default async function ChamadoDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  // Fetch eligible users (MASTER + TECNICO) for ticket assignment
+  const eligibleUsers = ticket.status === "ABERTO"
+    ? await prisma.user.findMany({
+        where: {
+          tenantId,
+          active: true,
+          role: { in: ["MASTER", "TECNICO"] },
+        },
+        select: { id: true, name: true, role: true },
+        orderBy: [{ role: "asc" }, { name: "asc" }],
+      })
+    : [];
+
   return (
     <TicketDetails
       ticket={{
@@ -47,6 +60,7 @@ export default async function ChamadoDetailPage({ params }: PageProps) {
         openedByName: ticket.openedBy.name,
         assignedToName: ticket.assignedTo?.name || null,
       }}
+      eligibleUsers={eligibleUsers}
     />
   );
 }

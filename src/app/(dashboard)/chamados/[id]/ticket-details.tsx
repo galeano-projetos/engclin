@@ -9,6 +9,12 @@ import { acceptTicket, resolveTicket, closeTicket } from "../actions";
 import { SlaIndicator } from "../sla-indicator";
 import Link from "next/link";
 
+interface EligibleUser {
+  id: string;
+  name: string;
+  role: string;
+}
+
 interface TicketData {
   id: string;
   description: string;
@@ -88,14 +94,32 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function TicketDetails({ ticket }: { ticket: TicketData }) {
+const roleLabels: Record<string, string> = {
+  MASTER: "Master",
+  TECNICO: "Técnico",
+};
+
+export function TicketDetails({ ticket, eligibleUsers = [] }: { ticket: TicketData; eligibleUsers?: EligibleUser[] }) {
   const [showResolveForm, setShowResolveForm] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleAccept() {
+    if (!selectedUserId) {
+      setError("Selecione um responsavel.");
+      return;
+    }
     setLoading(true);
-    await acceptTicket(ticket.id);
+    setError(null);
+    const result = await acceptTicket(ticket.id, selectedUserId);
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
     router.refresh();
   }
 
@@ -130,7 +154,7 @@ export function TicketDetails({ ticket }: { ticket: TicketData }) {
         </div>
         <div className="flex gap-2">
           {ticket.status === "ABERTO" && (
-            <Button loading={loading} onClick={handleAccept}>
+            <Button onClick={() => setShowAssignModal(true)}>
               Aceitar Chamado
             </Button>
           )}
@@ -164,6 +188,73 @@ export function TicketDetails({ ticket }: { ticket: TicketData }) {
               <p className="text-sm font-semibold text-red-800">Equipamento Critico — Plano de Contingencia</p>
               <p className="mt-1 text-sm text-red-700">{ticket.equipmentContingencyPlan}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de atribuição */}
+      {showAssignModal && (
+        <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            Atribuir Chamado
+          </h2>
+          <p className="mb-4 text-sm text-gray-600">
+            Selecione o responsavel por atender este chamado:
+          </p>
+
+          {error && (
+            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="mb-4 max-h-64 space-y-2 overflow-y-auto">
+            {eligibleUsers.map((user) => (
+              <label
+                key={user.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 transition-colors ${
+                  selectedUserId === user.id
+                    ? "border-blue-500 bg-white ring-2 ring-blue-500"
+                    : "border-gray-200 bg-white hover:border-blue-300"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="assignedUser"
+                  value={user.id}
+                  checked={selectedUserId === user.id}
+                  onChange={() => setSelectedUserId(user.id)}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                </div>
+                <Badge variant="muted">{roleLabels[user.role] || user.role}</Badge>
+              </label>
+            ))}
+            {eligibleUsers.length === 0 && (
+              <p className="text-sm text-gray-500">Nenhum usuario elegivel encontrado.</p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleAccept}
+              loading={loading}
+              disabled={!selectedUserId}
+            >
+              Confirmar Atribuicao
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAssignModal(false);
+                setSelectedUserId("");
+                setError(null);
+              }}
+            >
+              Cancelar
+            </Button>
           </div>
         </div>
       )}

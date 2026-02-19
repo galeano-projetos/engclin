@@ -74,14 +74,27 @@ export async function createTicket(formData: FormData) {
   redirect("/chamados");
 }
 
-export async function acceptTicket(id: string) {
+export async function acceptTicket(id: string, assignedToId: string) {
   const { tenantId } = await checkPermission("ticket.accept");
-  const user = await getCurrentUser();
+
+  // Verify the assigned user belongs to the same tenant and has an eligible role
+  const assignedUser = await prisma.user.findFirst({
+    where: {
+      id: assignedToId,
+      tenantId,
+      active: true,
+      role: { in: ["MASTER", "TECNICO"] },
+    },
+  });
+
+  if (!assignedUser) {
+    return { error: "Usuario nao encontrado ou sem permissao." };
+  }
 
   await prisma.correctiveMaintenance.update({
     where: { id, tenantId },
     data: {
-      assignedToId: user.id,
+      assignedToId,
       status: "EM_ATENDIMENTO",
     },
   });

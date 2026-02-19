@@ -111,10 +111,14 @@ async function tryLLM(
   fn: () => Promise<string>,
   fallback: string
 ): Promise<string> {
+  if (!process.env.OPENAI_API_KEY) {
+    return "Chave da OpenAI (OPENAI_API_KEY) nao configurada. Configure nas variaveis de ambiente.";
+  }
   try {
     const result = await fn();
     return result || fallback;
-  } catch {
+  } catch (error) {
+    console.error("[tryLLM] Erro na chamada LLM:", error instanceof Error ? error.message : error);
     return fallback;
   }
 }
@@ -788,7 +792,7 @@ ${reportData}
 
 Gere insights sobre tendencias, outliers ou pontos de atencao nos dados acima.`
       ),
-    "Insights nao disponiveis para este relatorio."
+    "Erro ao gerar insights. Verifique se a chave OPENAI_API_KEY esta configurada."
   );
 
   return { insight };
