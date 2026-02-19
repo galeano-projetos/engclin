@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PgtsGenerateModal } from "./pgts-generate-modal";
 
 interface PgtsVersion {
   id: string;
@@ -15,9 +17,38 @@ interface PgtsPageClientProps {
   versions: PgtsVersion[];
   canGenerate: boolean;
   isEnterprise: boolean;
+  tenantName: string;
+  tenantCnpj: string;
+  equipmentSummary: {
+    total: number;
+    critA: number;
+    critB: number;
+    critC: number;
+    ativos: number;
+  };
+  maintenanceSummary: {
+    preventivas: number;
+    calibracoes: number;
+    tse: number;
+  };
+  trainingSummary: {
+    total: number;
+    completions: number;
+  };
 }
 
-export function PgtsPageClient({ versions, canGenerate, isEnterprise }: PgtsPageClientProps) {
+export function PgtsPageClient({
+  versions,
+  canGenerate,
+  isEnterprise,
+  tenantName,
+  tenantCnpj,
+  equipmentSummary,
+  maintenanceSummary,
+  trainingSummary,
+}: PgtsPageClientProps) {
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div>
       <div className="flex items-start justify-between">
@@ -32,9 +63,7 @@ export function PgtsPageClient({ versions, canGenerate, isEnterprise }: PgtsPage
         <div className="relative">
           <Button
             disabled={!canGenerate}
-            onClick={() => {
-              // Placeholder — sera implementado na Etapa 2/3
-            }}
+            onClick={() => setShowModal(true)}
           >
             Gerar Novo PGTS
           </Button>
@@ -175,6 +204,18 @@ export function PgtsPageClient({ versions, canGenerate, isEnterprise }: PgtsPage
           </>
         )}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <PgtsGenerateModal
+          onClose={() => setShowModal(false)}
+          tenantName={tenantName}
+          tenantCnpj={tenantCnpj}
+          equipmentSummary={equipmentSummary}
+          maintenanceSummary={maintenanceSummary}
+          trainingSummary={trainingSummary}
+        />
+      )}
     </div>
   );
 }

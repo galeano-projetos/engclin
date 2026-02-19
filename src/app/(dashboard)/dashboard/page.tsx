@@ -22,6 +22,7 @@ import {
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import { computeGlobalMtbfMttr, formatHours } from "@/lib/mtbf-mttr";
 import { computeDepreciationSummary, formatBRL } from "@/lib/depreciation";
+import { PgtsExportButton } from "./pgts-export-button";
 
 interface PageProps {
   searchParams: Promise<{ upgrade?: string }>;
@@ -49,6 +50,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     serviceTypeStats,
     allClosedTickets,
     equipmentsForDepreciation,
+    latestPgts,
   ] = await Promise.all([
     prisma.equipment.count({
       where: { tenantId },
@@ -119,6 +121,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         metodoDepreciacao: true,
         valorResidual: true,
       },
+    }),
+    prisma.pgtsVersion.findFirst({
+      where: { tenantId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
     }),
   ]);
 
@@ -309,6 +316,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             </p>
           </div>
         )}
+      </div>
+
+      {/* PGTS Export */}
+      <div className="mt-6">
+        <PgtsExportButton
+          latestPgtsId={latestPgts?.id ?? null}
+          canExport={planAllows(plan, "pgts.create")}
+        />
       </div>
 
       {/* Service type breakdown */}
