@@ -30,7 +30,7 @@ export async function parseExcelAction(base64: string): Promise<{
 export async function executeImportAction(payload: ImportPayload): Promise<{
   error?: string;
   success?: boolean;
-  counts?: { units: number; providers: number; equipments: number; maintenances: number };
+  counts?: { units: number; providers: number; equipments: number; maintenances: number; equipmentTypes: number };
 }> {
   const { tenantId } = await checkPermission("import.execute");
 
@@ -83,12 +83,34 @@ export async function executeImportAction(payload: ImportPayload): Promise<{
         }
       }
 
-      // 3. Create equipments
-      const equipmentMap = new Map<string, string>(); // key -> id
+      // 3. Create/find equipment types
+      const equipmentTypeMap = new Map<string, string>();
+      let eqTypeCount = 0;
+      const typeNames = new Set(
+        payload.equipments.map((eq) => eq.typeName).filter(Boolean) as string[]
+      );
+      for (const typeName of typeNames) {
+        const existing = await tx.equipmentType.findFirst({
+          where: { tenantId, name: { equals: typeName, mode: "insensitive" } },
+        });
+        if (existing) {
+          equipmentTypeMap.set(typeName, existing.id);
+        } else {
+          const created = await tx.equipmentType.create({
+            data: { tenantId, name: typeName },
+          });
+          equipmentTypeMap.set(typeName, created.id);
+          eqTypeCount++;
+        }
+      }
+
+      // 4. Create equipments
+      const equipmentMap = new Map<string, string>();
       let eqCount = 0;
       for (const eq of payload.equipments) {
         const key = eq.patrimony || eq.name;
         const unitId = unitMap.get(eq.unitName) || unitMap.get("Sem Setor")!;
+        const equipmentTypeId = eq.typeName ? equipmentTypeMap.get(eq.typeName) : undefined;
 
         // Check if equipment with same patrimony exists
         let existing = null;
@@ -105,13 +127,20 @@ export async function executeImportAction(payload: ImportPayload): Promise<{
             data: {
               tenantId,
               unitId,
+              equipmentTypeId: equipmentTypeId || undefined,
               name: eq.name,
               criticality: eq.criticality,
               patrimony: eq.patrimony,
               brand: eq.brand,
               serialNumber: eq.serialNumber,
               model: eq.model,
+              anvisaRegistry: eq.anvisaRegistry,
+              ownershipType: eq.ownershipType || undefined,
+              loanProvider: eq.loanProvider,
               acquisitionDate: eq.acquisitionDate,
+              acquisitionValue: eq.acquisitionValue,
+              contingencyPlan: eq.contingencyPlan,
+              status: eq.status || "ATIVO",
             },
           });
           equipmentMap.set(key, created.id);
@@ -119,7 +148,7 @@ export async function executeImportAction(payload: ImportPayload): Promise<{
         }
       }
 
-      // 4. Create maintenances
+      // 5. Create maintenances
       let maintCount = 0;
       for (const m of payload.maintenances) {
         const equipmentId = equipmentMap.get(m.equipmentKey);
@@ -128,13 +157,10 @@ export async function executeImportAction(payload: ImportPayload): Promise<{
         const providerId = m.providerName ? providerMap.get(m.providerName) : undefined;
         const now = new Date();
 
-        // Determine dates
         const scheduledDate = m.executionDate || m.dueDate || now;
         const dueDate = m.dueDate || m.executionDate || now;
-
         const isExecuted = !!m.executionDate;
 
-        // Map serviceType to legacy type string
         const typeMap: Record<string, string> = {
           PREVENTIVA: "Manutencao Preventiva Geral",
           CALIBRACAO: "Calibracao",
@@ -164,6 +190,7 @@ export async function executeImportAction(payload: ImportPayload): Promise<{
         providers: payload.providers.length,
         equipments: eqCount,
         maintenances: maintCount,
+        equipmentTypes: eqTypeCount,
       };
     }, { timeout: 60000 });
 

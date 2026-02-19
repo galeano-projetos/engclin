@@ -3,39 +3,85 @@ import * as XLSX from "xlsx";
 export interface RawRow {
   setor?: string;
   equipamento?: string;
+  tipoEquipamento?: string;
   criticidade?: string;
   patrimonio?: string;
   marca?: string;
   numeroSerie?: string;
   modelo?: string;
+  registroAnvisa?: string;
+  tipoPropriedade?: string;
+  fornecedorComodato?: string;
   aquisicao?: string;
+  valorAquisicao?: string;
+  planoContingencia?: string;
+  status?: string;
   dataManutencao?: string;
   proximaManutencao?: string;
   dataCalibracao?: string;
   proximaCalibracao?: string;
+  dataTse?: string;
+  proximaTse?: string;
   quemRealizou?: string;
 }
 
 /** Map known column name patterns to our fields */
 const COLUMN_MAP: Record<string, keyof RawRow> = {
+  // Setor
   setor: "setor",
   "setor/unidade": "setor",
   unidade: "setor",
+  // Equipamento
   equipamento: "equipamento",
   "nome equipamento": "equipamento",
+  // Tipo de Equipamento
+  "tipo equipamento": "tipoEquipamento",
+  "tipo de equipamento": "tipoEquipamento",
+  // Criticidade
   criticidade: "criticidade",
+  // Patrimonio
   patrimonio: "patrimonio",
   "patrimônio": "patrimonio",
-  "pat": "patrimonio",
+  pat: "patrimonio",
+  // Marca
   marca: "marca",
+  fabricante: "marca",
+  // Numero de Serie
   "n/s": "numeroSerie",
   "numero de serie": "numeroSerie",
   "número de série": "numeroSerie",
   "nº serie": "numeroSerie",
+  // Modelo
   modelo: "modelo",
+  // Registro ANVISA
+  "registro anvisa": "registroAnvisa",
+  "reg anvisa": "registroAnvisa",
+  anvisa: "registroAnvisa",
+  // Tipo Propriedade
+  "tipo propriedade": "tipoPropriedade",
+  propriedade: "tipoPropriedade",
+  "proprio/comodato": "tipoPropriedade",
+  // Fornecedor Comodato
+  "fornecedor comodato": "fornecedorComodato",
+  comodato: "fornecedorComodato",
+  // Aquisicao
   aquisicao: "aquisicao",
   "aquisição": "aquisicao",
   "data aquisicao": "aquisicao",
+  // Valor Aquisicao
+  "valor aquisicao": "valorAquisicao",
+  "valor aquisição": "valorAquisicao",
+  "valor": "valorAquisicao",
+  // Plano de Contingencia
+  "plano contingencia": "planoContingencia",
+  "plano de contingencia": "planoContingencia",
+  "plano de contingência": "planoContingencia",
+  contingencia: "planoContingencia",
+  // Status
+  status: "status",
+  situacao: "status",
+  "situação": "status",
+  // Manutencao Preventiva
   "data manutencao": "dataManutencao",
   "data manutenção": "dataManutencao",
   "ultima manutencao": "dataManutencao",
@@ -43,6 +89,7 @@ const COLUMN_MAP: Record<string, keyof RawRow> = {
   "proxima manutencao": "proximaManutencao",
   "próxima manutenção": "proximaManutencao",
   "proxima manutenção": "proximaManutencao",
+  // Calibracao
   "data calibracao": "dataCalibracao",
   "data calibração": "dataCalibracao",
   "ultima calibracao": "dataCalibracao",
@@ -50,6 +97,13 @@ const COLUMN_MAP: Record<string, keyof RawRow> = {
   "proxima calibracao": "proximaCalibracao",
   "próxima calibração": "proximaCalibracao",
   "proxima calibração": "proximaCalibracao",
+  // TSE
+  "data tse": "dataTse",
+  "ultima tse": "dataTse",
+  "teste seguranca eletrica": "dataTse",
+  "proxima tse": "proximaTse",
+  "próxima tse": "proximaTse",
+  // Fornecedor
   "quem realizou": "quemRealizou",
   fornecedor: "quemRealizou",
   empresa: "quemRealizou",

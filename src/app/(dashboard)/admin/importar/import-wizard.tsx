@@ -12,7 +12,7 @@ export function ImportWizard() {
   const [step, setStep] = useState<Step>("upload");
   const [error, setError] = useState("");
   const [payload, setPayload] = useState<ImportPayload | null>(null);
-  const [counts, setCounts] = useState<{ units: number; providers: number; equipments: number; maintenances: number } | null>(null);
+  const [counts, setCounts] = useState<{ units: number; providers: number; equipments: number; maintenances: number; equipmentTypes: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +112,8 @@ export function ImportWizard() {
                 <p className="text-sm font-medium text-blue-800">Primeiro, baixe o modelo</p>
                 <p className="mt-1 text-xs text-blue-700">
                   Baixe a planilha modelo, preencha com os dados dos seus equipamentos
-                  e depois envie o arquivo preenchido. O modelo contém exemplos e instrucoes.
+                  e depois envie o arquivo preenchido. Apenas SETOR e EQUIPAMENTO sao obrigatorios,
+                  todos os outros campos podem ser preenchidos depois no sistema.
                 </p>
                 <a
                   href="/api/import-template"
@@ -132,9 +133,11 @@ export function ImportWizard() {
           <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
             <p className="mb-1 text-sm font-medium text-gray-700">Enviar planilha preenchida</p>
             <p className="mb-3 text-xs text-gray-500">
-              Colunas esperadas: SETOR, EQUIPAMENTO, CRITICIDADE, PATRIMONIO, MARCA,
-              N/S, MODELO, AQUISICAO, DATA MANUTENCAO, PROXIMA MANUTENCAO, DATA
-              CALIBRACAO, PROXIMA CALIBRACAO, QUEM REALIZOU
+              22 colunas suportadas: SETOR, EQUIPAMENTO, TIPO EQUIPAMENTO, CRITICIDADE,
+              PATRIMONIO, MARCA, N/S, MODELO, REGISTRO ANVISA, TIPO PROPRIEDADE,
+              FORNECEDOR COMODATO, AQUISICAO, VALOR AQUISICAO, PLANO CONTINGENCIA, STATUS,
+              DATA MANUTENCAO, PROXIMA MANUTENCAO, DATA CALIBRACAO, PROXIMA CALIBRACAO,
+              DATA TSE, PROXIMA TSE, QUEM REALIZOU
             </p>
             <label className="inline-block cursor-pointer rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700">
               {loading ? "Processando..." : "Selecionar Arquivo (.xlsx)"}
@@ -155,7 +158,7 @@ export function ImportWizard() {
         <div className="space-y-4">
           <div className="rounded-lg border bg-white p-6 shadow-sm">
             <h3 className="mb-3 text-lg font-semibold text-gray-900">Resumo da Importacao</h3>
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-5">
               <div className="rounded-md bg-blue-50 p-3 text-center">
                 <p className="text-2xl font-bold text-blue-700">{payload.units.length}</p>
                 <p className="text-xs text-blue-600">Setores</p>
@@ -163,6 +166,12 @@ export function ImportWizard() {
               <div className="rounded-md bg-green-50 p-3 text-center">
                 <p className="text-2xl font-bold text-green-700">{payload.providers.length}</p>
                 <p className="text-xs text-green-600">Fornecedores</p>
+              </div>
+              <div className="rounded-md bg-teal-50 p-3 text-center">
+                <p className="text-2xl font-bold text-teal-700">
+                  {new Set(payload.equipments.map((eq) => eq.typeName).filter(Boolean)).size}
+                </p>
+                <p className="text-xs text-teal-600">Tipos Equip.</p>
               </div>
               <div className="rounded-md bg-purple-50 p-3 text-center">
                 <p className="text-2xl font-bold text-purple-700">{payload.equipments.length}</p>
@@ -186,22 +195,28 @@ export function ImportWizard() {
                   <thead className="border-b bg-gray-50 text-gray-500">
                     <tr>
                       <th className="px-3 py-2">Nome</th>
+                      <th className="px-3 py-2">Tipo</th>
                       <th className="px-3 py-2">Setor</th>
                       <th className="px-3 py-2">Crit.</th>
                       <th className="px-3 py-2">Patrimonio</th>
                       <th className="px-3 py-2">Marca</th>
                       <th className="px-3 py-2">Modelo</th>
+                      <th className="px-3 py-2">ANVISA</th>
+                      <th className="px-3 py-2">Prop.</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {payload.equipments.slice(0, 20).map((eq, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="px-3 py-2">{eq.name}</td>
+                        <td className="px-3 py-2">{eq.typeName || "—"}</td>
                         <td className="px-3 py-2">{eq.unitName}</td>
                         <td className="px-3 py-2">{eq.criticality}</td>
                         <td className="px-3 py-2">{eq.patrimony || "—"}</td>
                         <td className="px-3 py-2">{eq.brand || "—"}</td>
                         <td className="px-3 py-2">{eq.model || "—"}</td>
+                        <td className="px-3 py-2">{eq.anvisaRegistry || "—"}</td>
+                        <td className="px-3 py-2">{eq.ownershipType || "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -233,7 +248,7 @@ export function ImportWizard() {
         <div className="space-y-4">
           <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center shadow-sm">
             <p className="text-lg font-semibold text-green-800">Importacao concluida!</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-5">
               <div className="rounded-md bg-white p-3 text-center">
                 <p className="text-2xl font-bold text-gray-900">{counts.units}</p>
                 <p className="text-xs text-gray-500">Setores</p>
@@ -243,8 +258,12 @@ export function ImportWizard() {
                 <p className="text-xs text-gray-500">Fornecedores</p>
               </div>
               <div className="rounded-md bg-white p-3 text-center">
+                <p className="text-2xl font-bold text-gray-900">{counts.equipmentTypes}</p>
+                <p className="text-xs text-gray-500">Tipos Equip.</p>
+              </div>
+              <div className="rounded-md bg-white p-3 text-center">
                 <p className="text-2xl font-bold text-gray-900">{counts.equipments}</p>
-                <p className="text-xs text-gray-500">Equipamentos criados</p>
+                <p className="text-xs text-gray-500">Equipamentos</p>
               </div>
               <div className="rounded-md bg-white p-3 text-center">
                 <p className="text-2xl font-bold text-gray-900">{counts.maintenances}</p>
