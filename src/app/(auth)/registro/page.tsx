@@ -124,7 +124,7 @@ function RegistroForm() {
           {" "}({ciclo})
         </p>
         <p className="mt-1 text-xs text-gray-400">
-          30 dias gratis — sem cobranca ate o fim do periodo
+          30 dias grátis — sem cobrança até o fim do período
         </p>
       </div>
 
@@ -154,7 +154,7 @@ function RegistroForm() {
             <p className="mt-1 text-xs text-green-600">Dados carregados automaticamente</p>
           )}
           {cnpjStatus === "error" && (
-            <p className="mt-1 text-xs text-amber-600">CNPJ nao encontrado. Preencha manualmente.</p>
+            <p className="mt-1 text-xs text-amber-600">CNPJ não encontrado. Preencha manualmente.</p>
           )}
         </div>
 
@@ -168,14 +168,14 @@ function RegistroForm() {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nome que aparecera no sistema"
+          placeholder="Nome que aparecerá no sistema"
         />
 
         <Input
           name="responsavel"
           label="Seu nome completo"
           required
-          placeholder="Nome do responsavel"
+          placeholder="Nome do responsável"
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -199,7 +199,7 @@ function RegistroForm() {
             label="Senha"
             type="password"
             required
-            placeholder="Minimo 8 caracteres"
+            placeholder="Mínimo 8 caracteres"
           />
           <Input
             name="confirmPassword"
@@ -215,7 +215,7 @@ function RegistroForm() {
         </Button>
 
         <p className="text-center text-xs text-gray-500">
-          Ja tem uma conta?{" "}
+          Já tem uma conta?{" "}
           <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">
             Fazer login
           </Link>

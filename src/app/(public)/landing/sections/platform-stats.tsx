@@ -87,7 +87,7 @@ export function PlatformStats() {
               inView ? "animate-fade-in-up" : "opacity-0"
             }`}
           >
-            Plataforma em numeros
+            Plataforma em números
           </p>
           <h2
             className={`mt-3 text-3xl font-bold text-gray-900 sm:text-4xl ${
@@ -95,7 +95,7 @@ export function PlatformStats() {
             }`}
             style={{ animationDelay: inView ? "150ms" : undefined }}
           >
-            Ja gerenciamos milhares de ativos.
+            Já gerenciamos milhares de ativos.
           </h2>
 
           <div className={`mt-12 ${showTenants ? "grid gap-8 sm:grid-cols-2" : "flex justify-center"}`}>
@@ -131,7 +131,7 @@ export function PlatformStats() {
                   Empresas confiam no Vitalis
                 </p>
                 <p className="mt-1 text-sm text-gray-400">
-                  Hospitais, clinicas e laboratorios
+                  Hospitais, clínicas e laboratórios
                 </p>
               </div>
             )}

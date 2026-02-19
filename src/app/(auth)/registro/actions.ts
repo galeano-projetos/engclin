@@ -31,28 +31,28 @@ export async function registerStep1(formData: FormData): Promise<{ error?: strin
     const ciclo = (formData.get("ciclo") as string)?.trim() || "mensal";
 
     // Validacoes
-    if (!name) return { error: "Nome da empresa e obrigatorio" };
-    if (!responsavel) return { error: "Nome do responsavel e obrigatorio" };
+    if (!name) return { error: "Nome da empresa é obrigatório" };
+    if (!responsavel) return { error: "Nome do responsável é obrigatório" };
 
     const cnpjResult = cnpjSchema.safeParse(cnpj);
-    if (!cnpjResult.success) return { error: "CNPJ invalido" };
+    if (!cnpjResult.success) return { error: "CNPJ inválido" };
 
     const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) return { error: "Email invalido" };
+    if (!emailResult.success) return { error: "Email inválido" };
 
     const passwordResult = passwordSchema.safeParse(password);
     if (!passwordResult.success) return { error: passwordResult.error.issues[0].message };
 
-    if (password !== confirmPassword) return { error: "As senhas nao conferem" };
+    if (password !== confirmPassword) return { error: "As senhas não conferem" };
 
     const normalizedCnpj = cnpj.replace(/\D/g, "");
 
     // Verificar duplicados
     const existingCnpj = await prisma.tenant.findFirst({ where: { cnpj: normalizedCnpj } });
-    if (existingCnpj) return { error: "Ja existe uma empresa cadastrada com este CNPJ" };
+    if (existingCnpj) return { error: "Já existe uma empresa cadastrada com este CNPJ" };
 
     const existingEmail = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (existingEmail) return { error: "Este email ja esta cadastrado" };
+    if (existingEmail) return { error: "Este email já está cadastrado" };
 
     // Mapear plano
     const planMap: Record<string, "ESSENCIAL" | "PROFISSIONAL" | "ENTERPRISE"> = {
@@ -126,10 +126,10 @@ export async function registerStep1(formData: FormData): Promise<{ error?: strin
 export async function registerPayment(formData: FormData): Promise<{ error?: string; success?: boolean }> {
   try {
     const tenantId = formData.get("tenantId") as string;
-    if (!tenantId) return { error: "Sessao invalida" };
+    if (!tenantId) return { error: "Sessão inválida" };
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    if (!tenant) return { error: "Empresa nao encontrada" };
+    if (!tenant) return { error: "Empresa não encontrada" };
 
     // Dados do cartao
     const holderName = (formData.get("holderName") as string)?.trim();
@@ -142,7 +142,7 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const holderEmail = (formData.get("holderEmail") as string)?.trim();
 
     if (!holderName || !cardNumber || !expiryMonth || !expiryYear || !ccv || !holderCpfCnpj || !holderPostalCode) {
-      return { error: "Preencha todos os dados do cartao" };
+      return { error: "Preencha todos os dados do cartão" };
     }
 
     // Buscar usuario MASTER para email
@@ -208,6 +208,6 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     return { success: true };
   } catch (error) {
     console.error("[registerPayment] Erro:", error instanceof Error ? error.message : error);
-    return { error: "Erro ao processar pagamento. Verifique os dados do cartao e tente novamente." };
+    return { error: "Erro ao processar pagamento. Verifique os dados do cartão e tente novamente." };
   }
 }

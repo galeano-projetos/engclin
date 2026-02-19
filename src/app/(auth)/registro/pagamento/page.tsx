@@ -58,8 +58,8 @@ function PagamentoForm() {
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-gray-900">Dados de pagamento</h1>
         <p className="mt-2 text-sm text-gray-500">
-          Seu cartao <strong>nao sera cobrado agora</strong>. A primeira cobranca
-          sera realizada apenas apos 30 dias.
+          Seu cartão <strong>não será cobrado agora</strong>. A primeira cobrança
+          será realizada apenas após 30 dias.
         </p>
       </div>
 
@@ -84,14 +84,14 @@ function PagamentoForm() {
 
         <Input
           name="holderName"
-          label="Nome impresso no cartao"
+          label="Nome impresso no cartão"
           required
-          placeholder="Como aparece no cartao"
+          placeholder="Como aparece no cartão"
         />
 
         <Input
           name="cardNumber"
-          label="Numero do cartao"
+          label="Número do cartão"
           required
           placeholder="0000 0000 0000 0000"
           maxLength={19}
@@ -150,8 +150,8 @@ function PagamentoForm() {
         </div>
 
         <p className="text-center text-xs text-gray-400">
-          Seus dados de pagamento sao processados de forma segura pelo Asaas.
-          Nenhum valor sera cobrado durante o periodo de trial.
+          Seus dados de pagamento são processados de forma segura pelo Asaas.
+          Nenhum valor será cobrado durante o período de trial.
         </p>
       </form>
     </div>
