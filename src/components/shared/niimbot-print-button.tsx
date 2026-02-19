@@ -15,9 +15,12 @@ interface NiimbotPrintButtonProps {
 
 type PrintStatus = "idle" | "preview" | "connecting" | "printing" | "done" | "error";
 
-// Canvas dimensions: 40mm x 70mm (portrait) at 8px/mm = 320x560
-const CANVAS_W = 320;
-const CANVAS_H = 560;
+// Preview canvas: portrait (40x70mm at 8px/mm = 320x560)
+const PREVIEW_W = 320;
+const PREVIEW_H = 560;
+// Print canvas: landscape 70x40mm (portrait rotated 90° CCW)
+const PRINT_W = 560;
+const PRINT_H = 320;
 
 export function NiimbotPrintButton({
   equipmentName,
@@ -42,19 +45,19 @@ export function NiimbotPrintButton({
       if (!qrDataUrl) return;
 
       const ctx = canvas.getContext("2d")!;
-      const centerX = CANVAS_W / 2;
-      const maxTextW = CANVAS_W - 32;
+      const centerX = PREVIEW_W / 2;
+      const maxTextW = PREVIEW_W - 32;
 
       // White background
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
 
       // Load QR image
       const qrImg = await loadImage(qrDataUrl);
 
       // Draw QR centered at top
       const qrSize = 200;
-      ctx.drawImage(qrImg, (CANVAS_W - qrSize) / 2, 16, qrSize, qrSize);
+      ctx.drawImage(qrImg, (PREVIEW_W - qrSize) / 2, 16, qrSize, qrSize);
 
       // All text centered below QR
       ctx.textAlign = "center";
@@ -108,7 +111,7 @@ export function NiimbotPrintButton({
       // Border around label (preview only)
       ctx.strokeStyle = "#e5e7eb";
       ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, CANVAS_W - 2, CANVAS_H - 2);
+      ctx.strokeRect(1, 1, PREVIEW_W - 2, PREVIEW_H - 2);
     },
     [qrDataUrl, equipmentName, brand, model, serialNumber, patrimony, unitName]
   );
@@ -148,14 +151,23 @@ export function NiimbotPrintButton({
 
       setStatus("printing");
 
-      // Create off-screen canvas with same dimensions as preview
-      const canvas = document.createElement("canvas");
-      canvas.width = CANVAS_W;
-      canvas.height = CANVAS_H;
-      await drawLabel(canvas);
+      // 1. Draw label in portrait (320x560)
+      const portraitCanvas = document.createElement("canvas");
+      portraitCanvas.width = PREVIEW_W;
+      portraitCanvas.height = PREVIEW_H;
+      await drawLabel(portraitCanvas);
+
+      // 2. Rotate 90° CCW into landscape (560x320) for the printer
+      const printCanvas = document.createElement("canvas");
+      printCanvas.width = PRINT_W;
+      printCanvas.height = PRINT_H;
+      const pctx = printCanvas.getContext("2d")!;
+      pctx.translate(0, PRINT_H);
+      pctx.rotate(-Math.PI / 2);
+      pctx.drawImage(portraitCanvas, 0, 0);
 
       // Encode and print
-      const encoded = ImageEncoder.encodeCanvas(canvas, "left");
+      const encoded = ImageEncoder.encodeCanvas(printCanvas, "left");
       const printTaskName = client.getPrintTaskType() ?? "B1";
       const printTask = client.abstraction.newPrintTask(printTaskName, {
         totalPages: 1,
@@ -211,7 +223,7 @@ export function NiimbotPrintButton({
   return (
     <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-700">Prévia da Etiqueta (40×70mm)</h4>
+        <h4 className="text-sm font-semibold text-gray-700">Prévia da Etiqueta (70×40mm)</h4>
         <button
           onClick={() => { setStatus("idle"); setErrorMsg(""); }}
           className="text-gray-400 hover:text-gray-600"
@@ -227,8 +239,8 @@ export function NiimbotPrintButton({
       <div className="flex justify-center rounded border border-gray-300 bg-white p-2">
         <canvas
           ref={previewCanvasRef}
-          width={CANVAS_W}
-          height={CANVAS_H}
+          width={PREVIEW_W}
+          height={PREVIEW_H}
           className="h-auto w-full max-w-[240px]"
         />
       </div>
