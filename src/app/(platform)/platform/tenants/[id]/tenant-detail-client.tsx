@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   toggleTenantActive,
+  deleteTenant,
   updateTenant,
   resetUserPassword,
   toggleUserActiveFromPlatform,
@@ -87,6 +88,8 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -134,6 +137,21 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       router.refresh();
     }
     setToggling(false);
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError("");
+
+    const result = await deleteTenant(tenant.id);
+
+    if (result.error) {
+      setError(result.error);
+      setDeleting(false);
+      setConfirmDelete(false);
+    } else {
+      router.push("/platform/tenants");
+    }
   }
 
   async function handleResetPassword(userId: string, userName: string) {
@@ -271,6 +289,13 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
           >
             {tenant.active ? "Desativar Tenant" : "Ativar Tenant"}
           </Button>
+          <Button
+            type="button"
+            variant="danger"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Excluir Tenant
+          </Button>
         </div>
       </form>
 
@@ -394,6 +419,37 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-red-700">Excluir Tenant</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Tem certeza que deseja excluir <strong>{tenant.name}</strong>?
+            </p>
+            <p className="mt-2 text-sm text-red-600 font-medium">
+              Esta acao e irreversivel. Todos os dados serao perdidos: usuarios, equipamentos, manutencoes, calibracoes e demais registros.
+            </p>
+            <div className="mt-4 flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                loading={deleting}
+              >
+                Excluir Permanentemente
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Password Reset Modal */}
       {resetModal && (

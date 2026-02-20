@@ -194,6 +194,24 @@ export async function toggleTenantActive(tenantId: string) {
 }
 
 // ============================================================
+// Excluir tenant e todos os dados relacionados
+// ============================================================
+
+export async function deleteTenant(tenantId: string) {
+  await checkPlatformAdmin();
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) return { error: "Tenant nao encontrado" };
+
+  // onDelete: Cascade no schema cuida de deletar users, equipments, etc.
+  await prisma.tenant.delete({ where: { id: tenantId } });
+
+  revalidatePath("/platform/tenants");
+  revalidatePath("/platform");
+  return { success: true };
+}
+
+// ============================================================
 // Atualizar plano do tenant
 // ============================================================
 
