@@ -5,6 +5,8 @@ import { MedicalPhysicsType, ServiceType } from "@prisma/client";
 import { planAllows, getAllowedServiceTypes } from "@/lib/auth/plan-features";
 import { notFound } from "next/navigation";
 import { EquipmentDetails } from "./equipment-details";
+import { EquipmentPhoto } from "./equipment-photo";
+import { EquipmentDocuments } from "./equipment-documents";
 import { ServiceStatusSummary } from "./service-status-summary";
 import { PhysicsTestStatusSummary } from "./physics-test-status-summary";
 import { MtbfMttrSummary } from "./mtbf-mttr-summary";
@@ -38,6 +40,7 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
 
   const equipment = await prisma.equipment.findFirst({
     where: { id, tenantId },
+    omit: { photoData: true },
     include: {
       unit: true,
       equipmentType: { select: { id: true, name: true } },
@@ -48,7 +51,9 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [units, equipmentTypes, closedTickets] = await Promise.all([
+  const hasPhoto = equipment.photoMimeType !== null;
+
+  const [units, equipmentTypes, closedTickets, documents] = await Promise.all([
     prisma.unit.findMany({
       where: { tenantId },
       orderBy: { name: "asc" },
@@ -62,6 +67,11 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
       where: { equipmentId: id, tenantId, closedAt: { not: null } },
       select: { equipmentId: true, openedAt: true, closedAt: true },
       orderBy: { openedAt: "asc" },
+    }),
+    prisma.equipmentDocument.findMany({
+      where: { equipmentId: id, tenantId },
+      select: { id: true, name: true, mimeType: true, fileSize: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -202,6 +212,8 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
     })
   );
 
+  const canEdit = hasPermission(role, "equipment.edit");
+
   return (
     <>
       <EquipmentDetails
@@ -225,11 +237,23 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
         }}
         units={units}
         equipmentTypes={equipmentTypes}
-        canEdit={hasPermission(role, "equipment.edit")}
+        canEdit={canEdit}
         canDelete={hasPermission(role, "equipment.delete")}
         showQrCode={showQrCode}
         plan={plan}
       />
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <EquipmentPhoto
+          equipmentId={equipment.id}
+          hasPhoto={hasPhoto}
+          canEdit={canEdit}
+        />
+        <EquipmentDocuments
+          equipmentId={equipment.id}
+          documents={documents}
+          canEdit={canEdit}
+        />
+      </div>
       <DepreciationSection
         showDepreciation={showDepreciation}
         depreciationData={depreciationData}

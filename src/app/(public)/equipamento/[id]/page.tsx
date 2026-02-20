@@ -26,6 +26,7 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
 
   const equipment = await prisma.equipment.findUnique({
     where: { id },
+    omit: { photoData: true },
     include: {
       unit: { select: { name: true } },
       preventiveMaintenances: {
@@ -123,22 +124,32 @@ export default async function PublicEquipmentPage({ params }: PageProps) {
         </div>
 
         <div className="rounded-xl bg-white shadow-lg">
-          {/* Foto placeholder */}
-          <div className="flex h-48 items-center justify-center rounded-t-xl bg-gray-100">
-            <svg
-              className="h-20 w-20 text-gray-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V5.25a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v14.25a1.5 1.5 0 001.5 1.5z"
+          {/* Foto do equipamento */}
+          {equipment.photoMimeType ? (
+            <div className="flex h-48 items-center justify-center overflow-hidden rounded-t-xl bg-gray-100">
+              <img
+                src={`/api/equipment/${equipment.id}/photo`}
+                alt={equipment.name}
+                className="h-full w-full object-cover"
               />
-            </svg>
-          </div>
+            </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center rounded-t-xl bg-gray-100">
+              <svg
+                className="h-20 w-20 text-gray-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V5.25a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v14.25a1.5 1.5 0 001.5 1.5z"
+                />
+              </svg>
+            </div>
+          )}
 
           {/* Informações */}
           <div className="p-6">

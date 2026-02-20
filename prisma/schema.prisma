@@ -268,7 +268,8 @@ model Equipment {
   metodoDepreciacao    DepreciationMethod  @default(LINEAR)
   valorResidual        Decimal?            // Valor residual apos depreciacao
   contingencyPlan  String?         // Plano de contingencia para equipamentos criticos
-  photoUrl         String?
+  photoData        Bytes?          // Foto do equipamento (armazenada no banco)
+  photoMimeType    String?         // MIME type da foto (ex: image/jpeg)
   deactivationDate   DateTime?
   deactivationReason String?
   lastConferenceDate DateTime?
@@ -286,6 +287,7 @@ model Equipment {
   correctiveMaintenances CorrectiveMaintenance[]
   medicalPhysicsTests    MedicalPhysicsTest[]
   contractEquipments     ContractEquipment[]
+  documents              EquipmentDocument[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -293,6 +295,27 @@ model Equipment {
   @@index([equipmentTypeId])
   @@index([tenantId, externalSource, externalId])
   @@map("equipments")
+}
+
+// ============================================================
+// EQUIPMENT DOCUMENT (Documentos anexados ao equipamento)
+// ============================================================
+model EquipmentDocument {
+  id          String   @id @default(cuid())
+  tenantId    String
+  equipmentId String
+  name        String   // Nome do documento (ex: "Manual Tecnico", "Nota Fiscal")
+  fileData    Bytes    // Conteudo do arquivo
+  mimeType    String   // MIME type (ex: application/pdf, image/jpeg)
+  fileSize    Int      // Tamanho em bytes
+  uploadedBy  String   // ID do usuario que fez upload
+  createdAt   DateTime @default(now())
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([equipmentId])
+  @@map("equipment_documents")
 }
 
 enum Criticality {

@@ -204,3 +204,147 @@ export async function deleteEquipment(id: string, reason?: string) {
   revalidatePath("/equipamentos");
   redirect("/equipamentos");
 }
+
+// ============================================================
+// Foto do equipamento
+// ============================================================
+
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5 MB
+
+export async function uploadEquipmentPhoto(equipmentId: string, formData: FormData) {
+  const { tenantId } = await checkPermission("equipment.edit");
+
+  const file = formData.get("photo") as File | null;
+  if (!file || file.size === 0) {
+    return { error: "Nenhuma foto selecionada." };
+  }
+
+  if (file.size > MAX_PHOTO_SIZE) {
+    return { error: "Foto deve ter no maximo 5 MB." };
+  }
+
+  if (!file.type.startsWith("image/")) {
+    return { error: "Arquivo deve ser uma imagem." };
+  }
+
+  const equipment = await prisma.equipment.findFirst({
+    where: { id: equipmentId, tenantId },
+    select: { id: true },
+  });
+  if (!equipment) {
+    return { error: "Equipamento nao encontrado." };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  await prisma.equipment.update({
+    where: { id: equipmentId },
+    data: {
+      photoData: buffer,
+      photoMimeType: file.type,
+    },
+  });
+
+  revalidatePath(`/equipamentos/${equipmentId}`);
+  return { success: true };
+}
+
+export async function deleteEquipmentPhoto(equipmentId: string) {
+  const { tenantId } = await checkPermission("equipment.edit");
+
+  const equipment = await prisma.equipment.findFirst({
+    where: { id: equipmentId, tenantId },
+    select: { id: true },
+  });
+  if (!equipment) {
+    return { error: "Equipamento nao encontrado." };
+  }
+
+  await prisma.equipment.update({
+    where: { id: equipmentId },
+    data: {
+      photoData: null,
+      photoMimeType: null,
+    },
+  });
+
+  revalidatePath(`/equipamentos/${equipmentId}`);
+  return { success: true };
+}
+
+// ============================================================
+// Documentos do equipamento
+// ============================================================
+
+const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_DOC_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+export async function uploadEquipmentDocument(equipmentId: string, formData: FormData) {
+  const { tenantId, userId } = await checkPermission("equipment.edit");
+
+  const file = formData.get("document") as File | null;
+  const name = (formData.get("name") as string)?.trim();
+
+  if (!file || file.size === 0) {
+    return { error: "Nenhum arquivo selecionado." };
+  }
+
+  if (!name) {
+    return { error: "Nome do documento e obrigatorio." };
+  }
+
+  if (file.size > MAX_DOC_SIZE) {
+    return { error: "Arquivo deve ter no maximo 10 MB." };
+  }
+
+  if (!ALLOWED_DOC_TYPES.includes(file.type)) {
+    return { error: "Tipo de arquivo nao permitido. Use PDF, JPEG, PNG ou WebP." };
+  }
+
+  const equipment = await prisma.equipment.findFirst({
+    where: { id: equipmentId, tenantId },
+    select: { id: true },
+  });
+  if (!equipment) {
+    return { error: "Equipamento nao encontrado." };
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  await prisma.equipmentDocument.create({
+    data: {
+      tenantId,
+      equipmentId,
+      name,
+      fileData: buffer,
+      mimeType: file.type,
+      fileSize: file.size,
+      uploadedBy: userId,
+    },
+  });
+
+  revalidatePath(`/equipamentos/${equipmentId}`);
+  return { success: true };
+}
+
+export async function deleteEquipmentDocument(documentId: string) {
+  const { tenantId } = await checkPermission("equipment.edit");
+
+  const doc = await prisma.equipmentDocument.findFirst({
+    where: { id: documentId, tenantId },
+    select: { id: true, equipmentId: true },
+  });
+  if (!doc) {
+    return { error: "Documento nao encontrado." };
+  }
+
+  await prisma.equipmentDocument.delete({ where: { id: documentId } });
+
+  revalidatePath(`/equipamentos/${doc.equipmentId}`);
+  return { success: true };
+}
