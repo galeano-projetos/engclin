@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { VitalisLogo } from "@/components/ui/vitalis-logo";
 import { LoginForm } from "./login-form";
 
@@ -15,7 +16,9 @@ export default function LoginPage() {
         <h2 className="mb-6 text-lg font-semibold text-gray-800">
           Entrar no sistema
         </h2>
-        <LoginForm />
+        <Suspense>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

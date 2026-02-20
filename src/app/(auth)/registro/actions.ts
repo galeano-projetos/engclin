@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { emailSchema, passwordSchema } from "@/lib/validation";
 import { z } from "zod";
-import { createCustomer, createSubscription, trialEndDate } from "@/lib/asaas";
+import { findCustomerByExternalReference, createCustomer, createSubscription, trialEndDate } from "@/lib/asaas";
 
 const cnpjSchema = z.string().min(14).max(18);
 
@@ -132,6 +132,12 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return { error: "Empresa não encontrada" };
 
+    // Já possui subscription? (retry/duplo clique)
+    if (tenant.asaasSubscriptionId) {
+      console.log(`[registerPayment] Tenant ${tenantId} ja possui subscription ${tenant.asaasSubscriptionId}, ignorando`);
+      return { success: true };
+    }
+
     // Dados do cartao
     const holderName = (formData.get("holderName") as string)?.trim();
     const cardNumber = (formData.get("cardNumber") as string)?.replace(/\D/g, "");
@@ -145,12 +151,30 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
       return { error: "Preencha todos os dados do cartão" };
     }
 
+    // Validacoes de formato
+    if (cardNumber.length < 13 || cardNumber.length > 19) {
+      return { error: "Número do cartão inválido" };
+    }
+    const monthNum = parseInt(expiryMonth, 10);
+    if (!monthNum || monthNum < 1 || monthNum > 12) {
+      return { error: "Mês de validade inválido" };
+    }
+    if (ccv.length < 3 || ccv.length > 4) {
+      return { error: "CVV inválido" };
+    }
+    if (holderCpfCnpj.length !== 11 && holderCpfCnpj.length !== 14) {
+      return { error: "CPF/CNPJ do titular inválido" };
+    }
+
     // Buscar usuario MASTER para email e telefone (cadastrados no passo 1)
     const masterUser = await prisma.user.findFirst({
       where: { tenantId, role: "MASTER" },
     });
+    if (!masterUser?.email) {
+      return { error: "Usuário não encontrado. Refaça o cadastro." };
+    }
 
-    const email = masterUser?.email || "";
+    const email = masterUser.email;
     const phone = tenant.telefone || "";
 
     // Determinar valor pelo plano
@@ -158,19 +182,42 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     const prices = PLAN_PRICES[planSlug] || PLAN_PRICES.essencial;
     const value = prices.monthly; // TODO: suportar ciclo anual
 
-    // 1. Criar customer no Asaas
-    const customer = await createCustomer({
-      name: tenant.name,
-      cpfCnpj: tenant.cnpj,
-      email,
-      phone,
-      postalCode: tenant.cep || holderPostalCode,
-      externalReference: tenantId,
-    });
+    // 1. Reaproveitar customer existente ou criar novo (protege contra retry)
+    let customerId = tenant.asaasCustomerId;
+
+    if (!customerId) {
+      // Verificar se ja existe no Asaas por externalReference (retry com crash no DB save)
+      console.log(`[registerPayment] Buscando customer existente no Asaas para tenant ${tenantId}`);
+      const existingCustomer = await findCustomerByExternalReference(tenantId);
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        console.log(`[registerPayment] Customer existente encontrado: ${customerId}`);
+      } else {
+        console.log(`[registerPayment] Criando customer no Asaas para tenant ${tenantId}`);
+        const customer = await createCustomer({
+          name: tenant.name,
+          cpfCnpj: tenant.cnpj,
+          email,
+          phone,
+          postalCode: tenant.cep || holderPostalCode,
+          externalReference: tenantId,
+        });
+        customerId = customer.id;
+        console.log(`[registerPayment] Customer criado: ${customerId}`);
+      }
+
+      // Salvar customer ID imediatamente (protege contra crash entre criar customer e subscription)
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { asaasCustomerId: customerId },
+      });
+    }
 
     // 2. Criar subscription com trial de 30 dias
+    console.log(`[registerPayment] Criando subscription no Asaas`);
     const subscription = await createSubscription({
-      customer: customer.id,
+      customer: customerId,
       value,
       nextDueDate: trialEndDate(),
       cycle: "MONTHLY",
@@ -191,12 +238,12 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
         phone,
       },
     });
+    console.log(`[registerPayment] Subscription criada: ${subscription.id}`);
 
-    // 3. Salvar IDs no Tenant
+    // 3. Salvar subscription ID no Tenant
     await prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        asaasCustomerId: customer.id,
         asaasSubscriptionId: subscription.id,
         subscriptionStatus: "TRIAL",
       },
@@ -204,10 +251,11 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
 
     // 4. Marcar Lead como convertida
     await prisma.lead.updateMany({
-      where: { email: masterUser?.email || "", converted: false },
+      where: { email, converted: false },
       data: { converted: true, tenantId },
     });
 
+    console.log(`[registerPayment] Concluido com sucesso para tenant ${tenantId}`);
     return { success: true };
   } catch (error) {
     console.error("[registerPayment] Erro:", error instanceof Error ? error.message : error);

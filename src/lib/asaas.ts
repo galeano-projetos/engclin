@@ -25,6 +25,7 @@ async function asaasRequest<T>(endpoint: string, body: unknown): Promise<T> {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
@@ -58,6 +59,22 @@ interface AsaasCustomer {
 
 export async function createCustomer(data: CreateCustomerInput): Promise<AsaasCustomer> {
   return asaasRequest<AsaasCustomer>("/customers", data);
+}
+
+/** Busca customer por externalReference (tenantId). Retorna null se nao encontrar. */
+export async function findCustomerByExternalReference(externalReference: string): Promise<AsaasCustomer | null> {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/customers?externalReference=${encodeURIComponent(externalReference)}`,
+      { headers: getHeaders(), signal: AbortSignal.timeout(15_000) },
+    );
+    if (!response.ok) return null;
+    const body = await response.json();
+    const customers = body.data as AsaasCustomer[] | undefined;
+    return customers?.[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================

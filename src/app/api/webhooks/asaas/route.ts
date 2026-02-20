@@ -11,11 +11,12 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   try {
-    // Validar token do webhook (opcional mas recomendado)
+    // Validar token do webhook
     const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
     if (webhookToken) {
       const authHeader = request.headers.get("asaas-access-token");
       if (authHeader !== webhookToken) {
+        console.warn("[Asaas Webhook] Token invalido recebido");
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     if (!tenant) {
-      console.log("[Asaas Webhook] Tenant nao encontrado para o evento");
+      console.warn(`[Asaas Webhook] Tenant nao encontrado para evento ${event}, subscription: ${subscriptionId}, customer: ${customerId}`);
       return NextResponse.json({ received: true });
     }
 
@@ -78,6 +79,15 @@ export async function POST(request: Request) {
         data: { subscriptionStatus: newStatus },
       });
       console.log(`[Asaas Webhook] Tenant ${tenant.id} status -> ${newStatus}`);
+    }
+
+    // Se recebemos SUBSCRIPTION_CREATED e o tenant nao tem subscriptionId, salvar
+    if (event === "SUBSCRIPTION_CREATED" && subscriptionId && !tenant.asaasSubscriptionId) {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { asaasSubscriptionId: subscriptionId },
+      });
+      console.log(`[Asaas Webhook] Tenant ${tenant.id} subscriptionId salvo via webhook: ${subscriptionId}`);
     }
 
     return NextResponse.json({ received: true });

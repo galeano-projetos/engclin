@@ -24,28 +24,34 @@ function PagamentoForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
 
-    const formData = new FormData(e.currentTarget);
-    formData.set("tenantId", tenantId);
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.set("tenantId", tenantId);
 
-    // Separar validade MM/AA
-    const expiry = (formData.get("expiry") as string) || "";
-    const [month, year] = expiry.split("/").map((s) => s.trim());
-    formData.set("expiryMonth", month || "");
-    formData.set("expiryYear", year?.length === 2 ? `20${year}` : year || "");
+      // Separar validade MM/AA
+      const expiry = (formData.get("expiry") as string) || "";
+      const [month, year] = expiry.split("/").map((s) => s.trim());
+      formData.set("expiryMonth", month || "");
+      formData.set("expiryYear", year?.length === 2 ? `20${year}` : year || "");
 
-    const result = await registerPayment(formData);
+      const result = await registerPayment(formData);
 
-    if (result.error) {
-      setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
       setLoading(false);
-      return;
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (

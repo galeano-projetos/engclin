@@ -78,37 +78,42 @@ function RegistroForm() {
     setLoading(true);
     setError("");
 
-    const formData = new FormData(e.currentTarget);
-    formData.set("plan", plan);
-    formData.set("ciclo", ciclo);
+    try {
+      const formData = new FormData(e.currentTarget);
+      formData.set("plan", plan);
+      formData.set("ciclo", ciclo);
 
-    const result = await registerStep1(formData);
+      const result = await registerStep1(formData);
 
-    if (result.error) {
-      setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
+
+      // Auto-login
+      const email = (formData.get("email") as string)?.trim();
+      const password = formData.get("password") as string;
+
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        // Login falhou mas cadastro deu certo — redirecionar para login
+        router.push("/login?registered=1");
+        return;
+      }
+
+      // Redirecionar para pagamento
+      router.push(`/registro/pagamento?tenantId=${result.tenantId}`);
+      router.refresh();
+    } catch {
+      setError("Erro de conexão. Tente novamente.");
       setLoading(false);
-      return;
     }
-
-    // Auto-login
-    const email = (formData.get("email") as string)?.trim();
-    const password = formData.get("password") as string;
-
-    const signInResult = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (signInResult?.error) {
-      // Login falhou mas cadastro deu certo — redirecionar para login
-      router.push("/login");
-      return;
-    }
-
-    // Redirecionar para pagamento
-    router.push(`/registro/pagamento?tenantId=${result.tenantId}`);
-    router.refresh();
   }
 
   return (
