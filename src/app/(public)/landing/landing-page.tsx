@@ -5,6 +5,7 @@ import { Hero } from "./sections/hero";
 import { ProblemSolution } from "./sections/problem-solution";
 import { Features } from "./sections/features";
 import { Pricing } from "./sections/pricing";
+import { Roi } from "./sections/roi";
 import { SocialProof } from "./sections/social-proof";
 import { PlatformStats } from "./sections/platform-stats";
 import { FinalCta } from "./sections/final-cta";
@@ -18,6 +19,7 @@ export function LandingPage() {
       <ProblemSolution />
       <Features />
       <Pricing />
+      <Roi />
       <SocialProof />
       <PlatformStats />
       <FinalCta />
