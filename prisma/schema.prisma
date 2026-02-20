@@ -37,6 +37,7 @@ model Tenant {
   asaasSubscriptionId String?
   trialEndsAt         DateTime?
   subscriptionStatus  String?   // TRIAL, ACTIVE, OVERDUE, CANCELLED
+  billingExempt       Boolean   @default(false) // Isento de cobranca (tenants de teste)
 
   lastOsNumber Int      @default(0)
 

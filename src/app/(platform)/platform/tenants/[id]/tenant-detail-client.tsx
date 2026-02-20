@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   toggleTenantActive,
+  toggleBillingExempt,
   deleteTenant,
   updateTenant,
   resetUserPassword,
@@ -60,6 +61,7 @@ interface TenantData {
   cnpj: string;
   plan: string;
   active: boolean;
+  billingExempt: boolean;
   createdAt: Date;
   razaoSocial: string | null;
   nomeFantasia: string | null;
@@ -88,6 +90,7 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [togglingBilling, setTogglingBilling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
@@ -121,6 +124,22 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
       router.refresh();
     }
     setLoading(false);
+  }
+
+  async function handleToggleBilling() {
+    setTogglingBilling(true);
+    setError("");
+    setSuccess("");
+
+    const result = await toggleBillingExempt(tenant.id);
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccess(tenant.billingExempt ? "Cobranca ativada" : "Cobranca isenta");
+      router.refresh();
+    }
+    setTogglingBilling(false);
   }
 
   async function handleToggleActive() {
@@ -212,6 +231,9 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
         <Badge variant={tenant.active ? "success" : "danger"}>
           {tenant.active ? "Ativo" : "Inativo"}
         </Badge>
+        {tenant.billingExempt && (
+          <Badge variant="warning">Isento de Cobranca</Badge>
+        )}
       </div>
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -277,9 +299,17 @@ export function TenantDetailClient({ tenant }: { tenant: TenantData }) {
           <Input name="emailEmpresa" label="Email" type="email" defaultValue={tenant.email || ""} />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button type="submit" loading={loading}>
             Salvar
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleToggleBilling}
+            loading={togglingBilling}
+          >
+            {tenant.billingExempt ? "Ativar Cobranca" : "Isentar Cobranca"}
           </Button>
           <Button
             type="button"

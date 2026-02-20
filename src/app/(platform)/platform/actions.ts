@@ -194,6 +194,27 @@ export async function toggleTenantActive(tenantId: string) {
 }
 
 // ============================================================
+// Toggle isencao de cobranca (tenants de teste)
+// ============================================================
+
+export async function toggleBillingExempt(tenantId: string) {
+  await checkPlatformAdmin();
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) return { error: "Tenant nao encontrado" };
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { billingExempt: !tenant.billingExempt },
+  });
+
+  revalidatePath("/platform/tenants");
+  revalidatePath(`/platform/tenants/${tenantId}`);
+  revalidatePath("/platform");
+  return { success: true };
+}
+
+// ============================================================
 // Excluir tenant e todos os dados relacionados
 // ============================================================
 
