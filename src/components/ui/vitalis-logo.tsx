@@ -6,10 +6,10 @@ interface VitalisLogoProps {
 }
 
 const sizes = {
-  sm: { width: 140, height: 79 },
-  md: { width: 200, height: 113 },
-  lg: { width: 280, height: 158 },
-  xl: { width: 380, height: 214 },
+  sm: { width: 140, height: 49 },
+  md: { width: 200, height: 70 },
+  lg: { width: 280, height: 99 },
+  xl: { width: 380, height: 134 },
 };
 
 export function VitalisLogo({ className, size = "md" }: VitalisLogoProps) {
