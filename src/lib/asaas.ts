@@ -127,6 +127,65 @@ export async function createSubscription(
 }
 
 // ============================================================
+// Criar cobranca avulsa (PIX)
+// ============================================================
+
+interface CreateChargeInput {
+  customer: string;
+  value: number;
+  dueDate: string; // YYYY-MM-DD
+  description?: string;
+  externalReference?: string;
+}
+
+interface AsaasCharge {
+  id: string;
+  customer: string;
+  value: number;
+  status: string;
+  billingType: string;
+  invoiceUrl: string;
+}
+
+export async function createPixCharge(data: CreateChargeInput): Promise<AsaasCharge> {
+  return asaasRequest<AsaasCharge>("/payments", {
+    ...data,
+    billingType: "PIX",
+  });
+}
+
+interface PixQrCode {
+  encodedImage: string; // Base64 QR code image
+  payload: string;      // PIX copia e cola
+  expirationDate: string;
+}
+
+export async function getPixQrCode(chargeId: string): Promise<PixQrCode> {
+  const response = await fetch(`${BASE_URL}/payments/${chargeId}/pixQrCode`, {
+    headers: getHeaders(),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Asaas pixQrCode error ${response.status}: ${text}`);
+  }
+
+  return response.json();
+}
+
+export async function getChargeStatus(chargeId: string): Promise<string> {
+  const response = await fetch(`${BASE_URL}/payments/${chargeId}`, {
+    headers: getHeaders(),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) return "UNKNOWN";
+  const body = await response.json();
+  return body.status as string;
+}
+
+// ============================================================
 // Helpers
 // ============================================================
 

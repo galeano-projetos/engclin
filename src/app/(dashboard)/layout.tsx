@@ -37,10 +37,14 @@ export default async function DashboardLayout({
   if (user.tenantId) {
     const tenant = await prisma.tenant.findUnique({
       where: { id: user.tenantId },
-      select: { asaasSubscriptionId: true, billingExempt: true },
+      select: { asaasSubscriptionId: true, billingExempt: true, subscriptionStatus: true },
     });
 
-    if (!tenant?.asaasSubscriptionId && !tenant?.billingExempt) {
+    const needsPayment =
+      !tenant?.billingExempt &&
+      (!tenant?.asaasSubscriptionId || tenant?.subscriptionStatus === "PENDING_PIX");
+
+    if (needsPayment) {
       redirect(`/registro/pagamento?tenantId=${user.tenantId}`);
     }
   }

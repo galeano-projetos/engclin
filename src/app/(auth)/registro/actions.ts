@@ -4,14 +4,14 @@ import { prisma } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { emailSchema, passwordSchema } from "@/lib/validation";
 import { z } from "zod";
-import { findCustomerByExternalReference, createCustomer, createSubscription, trialEndDate } from "@/lib/asaas";
+import { findCustomerByExternalReference, createCustomer, createSubscription, trialEndDate, createPixCharge, getPixQrCode, getChargeStatus } from "@/lib/asaas";
 
 const cnpjSchema = z.string().min(14).max(18);
 
-const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
-  essencial: { monthly: 297, annual: 247 },
-  profissional: { monthly: 728, annual: 607 },
-  enterprise: { monthly: 998, annual: 832 },
+const PLAN_PRICES: Record<string, { monthly: number; annual: number; annualTotal: number }> = {
+  essencial: { monthly: 297, annual: 247, annualTotal: 2970 },
+  profissional: { monthly: 728, annual: 607, annualTotal: 7280 },
+  enterprise: { monthly: 998, annual: 832, annualTotal: 9980 },
 };
 
 // ============================================================
@@ -261,4 +261,168 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     console.error("[registerPayment] Erro:", error instanceof Error ? error.message : error);
     return { error: "Erro ao processar pagamento. Verifique os dados do cartão e tente novamente." };
   }
+}
+
+// ============================================================
+// Etapa 2b: Pagamento PIX (cobranca avulsa anual)
+// ============================================================
+
+export async function registerPixPayment(
+  tenantId: string,
+): Promise<{ error?: string; chargeId?: string; qrCodeBase64?: string; pixCopiaECola?: string }> {
+  try {
+    if (!tenantId) return { error: "Sessão inválida" };
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return { error: "Empresa não encontrada" };
+
+    // Já possui subscription/cobranca ativa?
+    if (tenant.asaasSubscriptionId && tenant.subscriptionStatus !== "PENDING_PIX") {
+      return { error: "Pagamento já registrado." };
+    }
+
+    // Buscar usuario MASTER
+    const masterUser = await prisma.user.findFirst({
+      where: { tenantId, role: "MASTER" },
+    });
+    if (!masterUser?.email) {
+      return { error: "Usuário não encontrado. Refaça o cadastro." };
+    }
+
+    const email = masterUser.email;
+    const phone = tenant.telefone || "";
+
+    // Valor anual total
+    const planSlug = tenant.plan.toLowerCase() as keyof typeof PLAN_PRICES;
+    const prices = PLAN_PRICES[planSlug] || PLAN_PRICES.essencial;
+    const value = prices.annualTotal;
+
+    // 1. Obter ou criar customer
+    let customerId = tenant.asaasCustomerId;
+
+    if (!customerId) {
+      const existingCustomer = await findCustomerByExternalReference(tenantId);
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const customer = await createCustomer({
+          name: tenant.name,
+          cpfCnpj: tenant.cnpj,
+          email,
+          phone,
+          externalReference: tenantId,
+        });
+        customerId = customer.id;
+      }
+
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { asaasCustomerId: customerId },
+      });
+    }
+
+    // 2. Criar cobranca PIX
+    console.log(`[registerPixPayment] Criando cobranca PIX de R$${value} para tenant ${tenantId}`);
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 3); // 3 dias para pagar
+    const dueDateStr = dueDate.toISOString().slice(0, 10);
+
+    const charge = await createPixCharge({
+      customer: customerId,
+      value,
+      dueDate: dueDateStr,
+      description: `Vitalis - Plano ${tenant.plan} (Anual)`,
+      externalReference: tenantId,
+    });
+    console.log(`[registerPixPayment] Cobranca criada: ${charge.id}`);
+
+    // 3. Obter QR Code
+    const qrCode = await getPixQrCode(charge.id);
+
+    // 4. Salvar charge ID e status pendente
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        asaasSubscriptionId: charge.id,
+        subscriptionStatus: "PENDING_PIX",
+      },
+    });
+
+    // 5. Marcar Lead como convertida
+    await prisma.lead.updateMany({
+      where: { email, converted: false },
+      data: { converted: true, tenantId },
+    });
+
+    return {
+      chargeId: charge.id,
+      qrCodeBase64: qrCode.encodedImage,
+      pixCopiaECola: qrCode.payload,
+    };
+  } catch (error) {
+    console.error("[registerPixPayment] Erro:", error instanceof Error ? error.message : error);
+    return { error: "Erro ao gerar cobrança PIX. Tente novamente." };
+  }
+}
+
+// ============================================================
+// Verificar status do pagamento PIX
+// ============================================================
+
+export async function checkPixStatus(
+  tenantId: string,
+): Promise<{ status: string; paid: boolean }> {
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { asaasSubscriptionId: true, subscriptionStatus: true },
+    });
+
+    if (!tenant?.asaasSubscriptionId) {
+      return { status: "NOT_FOUND", paid: false };
+    }
+
+    // Se o webhook ja atualizou o status, retornar diretamente
+    if (tenant.subscriptionStatus === "ACTIVE") {
+      return { status: "CONFIRMED", paid: true };
+    }
+
+    // Consultar Asaas diretamente
+    const asaasStatus = await getChargeStatus(tenant.asaasSubscriptionId);
+    const paid = asaasStatus === "RECEIVED" || asaasStatus === "CONFIRMED";
+
+    if (paid && tenant.subscriptionStatus !== "ACTIVE") {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { subscriptionStatus: "ACTIVE" },
+      });
+    }
+
+    return { status: asaasStatus, paid };
+  } catch {
+    return { status: "ERROR", paid: false };
+  }
+}
+
+// ============================================================
+// Obter preco do plano (para exibir na pagina de pagamento)
+// ============================================================
+
+export async function getPlanPricing(
+  tenantId: string,
+): Promise<{ plan: string; monthly: number; annualTotal: number } | null> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { plan: true },
+  });
+  if (!tenant) return null;
+
+  const planSlug = tenant.plan.toLowerCase() as keyof typeof PLAN_PRICES;
+  const prices = PLAN_PRICES[planSlug] || PLAN_PRICES.essencial;
+
+  return {
+    plan: tenant.plan,
+    monthly: prices.monthly,
+    annualTotal: prices.annualTotal,
+  };
 }
