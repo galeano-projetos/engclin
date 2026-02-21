@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: "Vitalis - Gestão de Equipamentos com IA",
   description:
     "Sistema SaaS para gestão de equipamentos com inteligência artificial",
+  icons: {
+    icon: "/vitalis-icon.png",
+    apple: "/vitalis-icon.png",
+  },
 };
 
 export default function RootLayout({
