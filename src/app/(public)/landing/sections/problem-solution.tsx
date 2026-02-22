@@ -69,14 +69,14 @@ export function ProblemSolution() {
   const { ref, inView } = useInView();
 
   return (
-    <section id="problemas" ref={ref} className="scroll-mt-20 bg-gray-50 px-4 py-24 sm:px-6 lg:px-8">
+    <section id="problemas" ref={ref} className="scroll-mt-20 bg-navy-950 px-4 py-24 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className={`text-center ${inView ? "animate-fade-in-up" : "opacity-0"}`}>
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">
             Sua gestão de equipamentos ainda está no passado?
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-400">
             Planilhas complexas, falta de controle e riscos de conformidade são gargalos
             que impedem o crescimento.
           </p>
@@ -87,34 +87,34 @@ export function ProblemSolution() {
           {items.map((item, i) => (
             <div
               key={i}
-              className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${
+              className={`overflow-hidden rounded-2xl border border-slate-700/50 bg-navy-800/50 shadow-lg backdrop-blur-sm ${
                 inView ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: inView ? `${i * 150 + 200}ms` : undefined }}
             >
               {/* Problem */}
-              <div className="border-b border-gray-100 p-6">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500">
+              <div className="border-b border-slate-700/50 p-6">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
                   {item.problem.icon}
                 </div>
-                <h3 className="text-sm font-semibold text-red-600">{item.problem.title}</h3>
-                <p className="mt-1 text-sm text-gray-500">{item.problem.desc}</p>
+                <h3 className="text-sm font-semibold text-red-400">{item.problem.title}</h3>
+                <p className="mt-1 text-sm text-slate-400">{item.problem.desc}</p>
               </div>
 
               {/* Arrow */}
               <div className="flex items-center justify-center py-2">
-                <svg className="h-5 w-5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-5 w-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
                 </svg>
               </div>
 
               {/* Solution */}
               <div className="p-6">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500/10 text-teal-400">
                   {item.solution.icon}
                 </div>
-                <h3 className="text-sm font-semibold text-teal-600">{item.solution.title}</h3>
-                <p className="mt-1 text-sm text-gray-600">{item.solution.desc}</p>
+                <h3 className="text-sm font-semibold text-teal-400">{item.solution.title}</h3>
+                <p className="mt-1 text-sm text-slate-300">{item.solution.desc}</p>
               </div>
             </div>
           ))}

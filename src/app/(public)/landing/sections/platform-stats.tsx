@@ -76,7 +76,7 @@ export function PlatformStats() {
       ref={ref}
       className={`px-4 sm:px-6 lg:px-8 transition-all duration-500 ${
         hasData
-          ? "bg-gradient-to-b from-gray-50 to-white py-20"
+          ? "bg-gradient-to-b from-slate-50 to-white py-20"
           : "h-0 overflow-hidden py-0"
       }`}
     >
@@ -90,7 +90,7 @@ export function PlatformStats() {
             Plataforma em números
           </p>
           <h2
-            className={`mt-3 text-3xl font-bold text-gray-900 sm:text-4xl ${
+            className={`mt-3 text-3xl font-bold text-slate-900 sm:text-4xl ${
               inView ? "animate-fade-in-up" : "opacity-0"
             }`}
             style={{ animationDelay: inView ? "150ms" : undefined }}
@@ -100,7 +100,7 @@ export function PlatformStats() {
 
           <div className={`mt-12 ${showTenants ? "grid gap-8 sm:grid-cols-2" : "flex justify-center"}`}>
             <div
-              className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${showTenants ? "" : "max-w-md w-full"} ${
+              className={`rounded-2xl border border-slate-200 bg-white p-8 shadow-sm ${showTenants ? "" : "max-w-md w-full"} ${
                 inView ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: inView ? "300ms" : undefined }}
@@ -109,17 +109,17 @@ export function PlatformStats() {
                 {started ? <AnimatedCounter target={stats.totalEquipments} /> : "0"}
                 <span className="text-3xl text-teal-400">+</span>
               </div>
-              <p className="mt-3 text-lg text-gray-600">
+              <p className="mt-3 text-lg text-slate-600">
                 Equipamentos gerenciados
               </p>
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-slate-400">
                 Ativos monitorados em tempo real
               </p>
             </div>
 
             {showTenants && (
               <div
-                className={`rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+                className={`rounded-2xl border border-slate-200 bg-white p-8 shadow-sm ${
                   inView ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: inView ? "450ms" : undefined }}
@@ -127,10 +127,10 @@ export function PlatformStats() {
                 <div className="text-5xl font-extrabold text-teal-600 sm:text-6xl">
                   {started ? <AnimatedCounter target={stats.totalTenants} /> : "0"}
                 </div>
-                <p className="mt-3 text-lg text-gray-600">
+                <p className="mt-3 text-lg text-slate-600">
                   Empresas confiam no Vitalis
                 </p>
-                <p className="mt-1 text-sm text-gray-400">
+                <p className="mt-1 text-sm text-slate-400">
                   Hospitais, clínicas e laboratórios
                 </p>
               </div>

@@ -13,7 +13,7 @@ import { Footer } from "./sections/footer";
 
 export function LandingPage() {
   return (
-    <div className="bg-white text-gray-900">
+    <div className="bg-white text-slate-900">
       <Navbar />
       <Hero />
       <ProblemSolution />

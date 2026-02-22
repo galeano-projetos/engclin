@@ -89,10 +89,10 @@ export function Roi() {
           <p className="text-sm font-semibold uppercase tracking-wider text-teal-600">
             Retorno sobre investimento
           </p>
-          <h2 className="mt-3 text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h2 className="mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
             O Vitalis se paga em semanas, n{"\u00e3"}o em anos.
           </h2>
-          <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-3xl text-lg text-slate-600">
             An{"\u00e1"}lise conservadora baseada em estudo da Universidade Federal do ABC,
             que aponta custos de manuten{"\u00e7\u00e3"}o de 6-7% do valor do parque de equipamentos ao ano.
           </p>
@@ -104,12 +104,12 @@ export function Roi() {
           style={{ animationDelay: inView ? "150ms" : undefined }}
         >
           {stats.map((s, i) => (
-            <div key={i} className="flex flex-col items-center rounded-xl border border-gray-100 bg-gray-50 p-5 text-center">
+            <div key={i} className="flex flex-col items-center rounded-xl border border-slate-100 bg-slate-50 p-5 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
                 {s.icon}
               </div>
-              <p className="mt-3 text-2xl font-bold text-gray-900">{s.value}</p>
-              <p className="mt-1 text-sm text-gray-500">{s.label}</p>
+              <p className="mt-3 text-2xl font-bold text-slate-900">{s.value}</p>
+              <p className="mt-1 text-sm text-slate-500">{s.label}</p>
             </div>
           ))}
         </div>
@@ -122,15 +122,15 @@ export function Roi() {
               className={`relative flex flex-col rounded-2xl border p-6 transition-all ${
                 card.highlighted
                   ? "border-teal-500 bg-white shadow-lg shadow-teal-500/10 lg:scale-105"
-                  : "border-gray-200 bg-white shadow-sm"
+                  : "border-slate-200 bg-white shadow-sm"
               } ${inView ? "animate-scale-in" : "opacity-0"}`}
               style={{ animationDelay: inView ? `${i * 100 + 300}ms` : undefined }}
             >
               {/* Header */}
               <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900">{card.label}</h3>
-                <p className="text-xs text-gray-500">{card.subtitle}</p>
-                <p className="mt-1 text-xs text-gray-400">{card.equipment}</p>
+                <h3 className="text-lg font-bold text-slate-900">{card.label}</h3>
+                <p className="text-xs text-slate-500">{card.subtitle}</p>
+                <p className="mt-1 text-xs text-slate-400">{card.equipment}</p>
               </div>
 
               {/* ROI highlight */}
@@ -141,16 +141,16 @@ export function Roi() {
 
               {/* Savings */}
               <div className="mt-4 text-center">
-                <p className="text-2xl font-bold text-gray-900">{card.savings}</p>
-                <p className="text-xs text-gray-500">{card.savingsLabel}</p>
+                <p className="text-2xl font-bold text-slate-900">{card.savings}</p>
+                <p className="text-xs text-slate-500">{card.savingsLabel}</p>
               </div>
 
               {/* Breakdown */}
-              <div className="mt-5 space-y-2 border-t border-gray-100 pt-4">
+              <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
                 {card.details.map((d, j) => (
                   <div key={j} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-500">{d.source}</span>
-                    <span className="whitespace-nowrap text-xs font-medium text-gray-900">{d.value}</span>
+                    <span className="text-xs text-slate-500">{d.source}</span>
+                    <span className="whitespace-nowrap text-xs font-medium text-slate-900">{d.value}</span>
                   </div>
                 ))}
               </div>
@@ -163,7 +163,7 @@ export function Roi() {
           className={`mt-12 text-center ${inView ? "animate-fade-in" : "opacity-0"}`}
           style={{ animationDelay: inView ? "700ms" : undefined }}
         >
-          <p className="text-xs leading-relaxed text-gray-400">
+          <p className="text-xs leading-relaxed text-slate-400">
             Fonte: Nascimento &amp; Tanaka (2014), Universidade Federal do ABC — XXIV Congresso
             Brasileiro de Engenharia Biom{"\u00e9"}dica. Benchmarks CMMS: ClickMaint, eMaint.
             Percentuais conservadores aplicados (10-15% redu{"\u00e7\u00e3"}o de custos, 15-20% produtividade).

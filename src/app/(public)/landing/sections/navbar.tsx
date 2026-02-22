@@ -27,13 +27,15 @@ export function Navbar() {
     <nav
       className={`fixed top-0 z-50 w-full transition-all duration-300 ${
         scrolled
-          ? "border-b border-gray-100 bg-white/90 shadow-sm backdrop-blur-lg"
-          : "bg-white"
+          ? "border-b border-slate-700/50 bg-navy-950/90 shadow-lg backdrop-blur-lg"
+          : "bg-transparent"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <a href="#" className="shrink-0">
-          <VitalisLogo size="sm" />
+          <div className="inline-block rounded-lg bg-white p-1.5">
+            <VitalisLogo size="sm" />
+          </div>
         </a>
 
         {/* Desktop links */}
@@ -42,7 +44,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm text-gray-600 transition-colors hover:text-teal-600"
+              className="text-sm text-white/70 transition-colors hover:text-teal-400"
             >
               {link.label}
             </a>
@@ -52,7 +54,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/login"
-            className="hidden text-sm text-gray-600 transition-colors hover:text-gray-900 sm:inline-block"
+            className="hidden text-sm text-white/60 transition-colors hover:text-white sm:inline-block"
           >
             Entrar
           </Link>
@@ -66,7 +68,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="rounded-md p-2 text-gray-500 hover:text-gray-900 lg:hidden"
+            className="rounded-md p-2 text-white/60 hover:text-white lg:hidden"
             aria-label="Menu"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -82,13 +84,13 @@ export function Navbar() {
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 top-16 z-40 flex flex-col items-center gap-8 bg-white/95 pt-16 backdrop-blur-lg lg:hidden">
+        <div className="fixed inset-0 top-16 z-40 flex flex-col items-center gap-8 bg-navy-950/95 pt-16 backdrop-blur-lg lg:hidden">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className="text-lg text-gray-700 transition-colors hover:text-teal-600"
+              className="text-lg text-white/80 transition-colors hover:text-teal-400"
             >
               {link.label}
             </a>
@@ -96,7 +98,7 @@ export function Navbar() {
           <Link
             href="/login"
             onClick={() => setMobileOpen(false)}
-            className="text-lg text-gray-500 transition-colors hover:text-gray-900"
+            className="text-lg text-white/50 transition-colors hover:text-white"
           >
             Entrar
           </Link>

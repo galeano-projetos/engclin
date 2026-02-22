@@ -58,18 +58,18 @@ export function Features() {
     <section
       id="funcionalidades"
       ref={ref}
-      className="scroll-mt-20 bg-white px-4 py-24 sm:px-6 lg:px-8"
+      className="scroll-mt-20 bg-slate-50 px-4 py-24 sm:px-6 lg:px-8"
     >
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className={`text-center ${inView ? "animate-fade-in-up" : "opacity-0"}`}>
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
             Inteligência que você pode ver.{" "}
             <span className="text-teal-600">
               Eficiência que você pode medir.
             </span>
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
             Funcionalidades pensadas para equipes de engenharia clínica que precisam de
             controle total, conformidade e inteligência.
           </p>
@@ -80,7 +80,7 @@ export function Features() {
           {features.map((feature, i) => (
             <div
               key={i}
-              className={`group relative rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${
+              className={`group relative rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-lg ${
                 inView ? "animate-scale-in" : "opacity-0"
               }`}
               style={{ animationDelay: inView ? `${i * 100 + 200}ms` : undefined }}
@@ -93,8 +93,8 @@ export function Features() {
               <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl ${feature.iconBg}`}>
                 {feature.icon}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              <h3 className="text-lg font-semibold text-slate-900">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
                 {feature.description}
               </p>
             </div>
