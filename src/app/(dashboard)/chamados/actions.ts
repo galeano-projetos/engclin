@@ -125,35 +125,39 @@ export async function resolveTicket(id: string, formData: FormData) {
     return { error: "Custo invalido." };
   }
 
-  const ticket = await prisma.correctiveMaintenance.update({
-    where: { id, tenantId },
-    data: {
-      diagnosis,
-      solution,
-      partsUsed,
-      timeSpent,
-      cost,
-      status: "RESOLVIDO",
-      closedAt: new Date(),
-    },
-  });
-
-  // Only set equipment to ATIVO if no other open tickets exist
-  const otherOpenTickets = await prisma.correctiveMaintenance.count({
-    where: {
-      equipmentId: ticket.equipmentId,
-      tenantId,
-      status: { in: ["ABERTO", "EM_ATENDIMENTO"] },
-      id: { not: id },
-    },
-  });
-
-  if (otherOpenTickets === 0) {
-    await prisma.equipment.update({
-      where: { id: ticket.equipmentId, tenantId },
-      data: { status: "ATIVO" },
+  const ticket = await prisma.$transaction(async (tx) => {
+    const updated = await tx.correctiveMaintenance.update({
+      where: { id, tenantId },
+      data: {
+        diagnosis,
+        solution,
+        partsUsed,
+        timeSpent,
+        cost,
+        status: "RESOLVIDO",
+        closedAt: new Date(),
+      },
     });
-  }
+
+    // Only set equipment to ATIVO if no other open tickets exist
+    const otherOpenTickets = await tx.correctiveMaintenance.count({
+      where: {
+        equipmentId: updated.equipmentId,
+        tenantId,
+        status: { in: ["ABERTO", "EM_ATENDIMENTO"] },
+        id: { not: id },
+      },
+    });
+
+    if (otherOpenTickets === 0) {
+      await tx.equipment.update({
+        where: { id: updated.equipmentId, tenantId },
+        data: { status: "ATIVO" },
+      });
+    }
+
+    return updated;
+  });
 
   await invalidatePhysicsTests(tenantId, ticket.equipmentId);
 

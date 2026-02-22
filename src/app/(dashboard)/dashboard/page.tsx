@@ -105,7 +105,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     getCalibrationStatus(),
     getServiceTypeStatus(),
     prisma.correctiveMaintenance.findMany({
-      where: { tenantId, closedAt: { not: null } },
+      where: {
+        tenantId,
+        closedAt: { not: null, gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) },
+      },
       select: { equipmentId: true, openedAt: true, closedAt: true },
       orderBy: [{ equipmentId: "asc" }, { openedAt: "asc" }],
     }),
@@ -199,10 +202,43 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           Este recurso não está disponível no seu plano atual. Entre em contato para fazer upgrade.
         </div>
       )}
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        Visao geral do parque tecnologico
-      </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Visao geral do parque tecnologico
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/chamados/novo"
+            className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Chamado
+          </Link>
+          <Link
+            href="/manutencoes/nova"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Preventiva
+          </Link>
+          <Link
+            href="/equipamentos/novo"
+            className="inline-flex items-center gap-1.5 rounded-md bg-gray-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-700 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Equipamento
+          </Link>
+        </div>
+      </div>
 
       {/* Cards */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

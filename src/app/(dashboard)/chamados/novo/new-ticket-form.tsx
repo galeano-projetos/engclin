@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { createTicketAction } from "../actions";
 import Link from "next/link";
@@ -50,11 +51,11 @@ export function NewTicketForm({ equipments, defaultEquipmentId }: NewTicketFormP
           Dados do Chamado
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select
+          <Combobox
             id="equipmentId"
             name="equipmentId"
             label="Equipamento *"
-            placeholder="Selecione o equipamento"
+            placeholder="Buscar equipamento..."
             options={equipments.map((eq) => ({
               value: eq.id,
               label: `${eq.name}${eq.patrimony ? ` (${eq.patrimony})` : ""} [${criticalityLabels[eq.criticality]}]`,

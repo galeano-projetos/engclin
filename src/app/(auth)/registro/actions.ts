@@ -240,19 +240,19 @@ export async function registerPayment(formData: FormData): Promise<{ error?: str
     });
     console.log(`[registerPayment] Subscription criada: ${subscription.id}`);
 
-    // 3. Salvar subscription ID no Tenant
-    await prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        asaasSubscriptionId: subscription.id,
-        subscriptionStatus: "TRIAL",
-      },
-    });
-
-    // 4. Marcar Lead como convertida
-    await prisma.lead.updateMany({
-      where: { email, converted: false },
-      data: { converted: true, tenantId },
+    // 3. Salvar subscription ID no Tenant + Marcar Lead como convertida (transacao)
+    await prisma.$transaction(async (tx) => {
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: {
+          asaasSubscriptionId: subscription.id,
+          subscriptionStatus: "TRIAL",
+        },
+      });
+      await tx.lead.updateMany({
+        where: { email, converted: false },
+        data: { converted: true, tenantId },
+      });
     });
 
     console.log(`[registerPayment] Concluido com sucesso para tenant ${tenantId}`);

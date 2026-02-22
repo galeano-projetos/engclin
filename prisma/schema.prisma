@@ -55,6 +55,8 @@ model Tenant {
   trainingCompletions TrainingCompletion[]
   pgtsVersions       PgtsVersion[]
 
+  @@index([asaasCustomerId])
+  @@index([asaasSubscriptionId])
   @@map("tenants")
 }
 
@@ -404,6 +406,7 @@ model CorrectiveMaintenance {
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([equipmentId])
+  @@index([equipmentId, tenantId, status])
   @@index([openedById])
   @@index([assignedToId])
   @@map("corrective_maintenances")

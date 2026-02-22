@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -101,21 +102,21 @@ export function EquipmentForm({
             defaultValue={equipment?.name}
             required
           />
-          <Select
+          <Combobox
             id="unitId"
             name="unitId"
             label="Setor / Localizacao *"
-            placeholder="Selecione o setor"
+            placeholder="Buscar setor..."
             options={units.map((u) => ({ value: u.id, label: u.name }))}
             defaultValue={equipment?.unitId}
             required
           />
           {equipmentTypes.length > 0 && (
-            <Select
+            <Combobox
               id="equipmentTypeId"
               name="equipmentTypeId"
               label="Tipo de Equipamento"
-              placeholder="Selecione o tipo"
+              placeholder="Buscar tipo..."
               options={equipmentTypes.map((t) => ({ value: t.id, label: t.name }))}
               value={selectedTypeId}
               onChange={(e) => handleTypeChange(e.target.value)}

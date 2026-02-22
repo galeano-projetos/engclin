@@ -168,9 +168,16 @@ export function EquipmentDetails({
         </div>
         <div className="flex gap-2">
           {canEdit && (
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              Editar
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                Editar
+              </Button>
+              <Link href={`/equipamentos/novo?clone=${equipment.id}`}>
+                <Button type="button" variant="secondary">
+                  Duplicar
+                </Button>
+              </Link>
+            </>
           )}
           {canDelete && equipment.status !== "DESCARTADO" && (
             <Button

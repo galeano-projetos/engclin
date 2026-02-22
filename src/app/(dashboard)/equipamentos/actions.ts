@@ -238,7 +238,7 @@ export async function uploadEquipmentPhoto(equipmentId: string, formData: FormDa
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await prisma.equipment.update({
-    where: { id: equipmentId },
+    where: { id: equipmentId, tenantId },
     data: {
       photoData: buffer,
       photoMimeType: file.type,
@@ -261,7 +261,7 @@ export async function deleteEquipmentPhoto(equipmentId: string) {
   }
 
   await prisma.equipment.update({
-    where: { id: equipmentId },
+    where: { id: equipmentId, tenantId },
     data: {
       photoData: null,
       photoMimeType: null,

@@ -117,6 +117,8 @@ function normalizeHeader(h: string): string {
     .replace(/[^a-záàâãéèêíïóôõúüç\s/]/gi, "");
 }
 
+const MAX_ROWS = 5000;
+
 export function parseExcel(buffer: ArrayBuffer): RawRow[] {
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -125,6 +127,10 @@ export function parseExcel(buffer: ArrayBuffer): RawRow[] {
   });
 
   if (jsonData.length === 0) return [];
+
+  if (jsonData.length > MAX_ROWS) {
+    throw new Error(`Planilha excede o limite de ${MAX_ROWS} linhas (encontradas: ${jsonData.length}). Divida o arquivo e tente novamente.`);
+  }
 
   // Detect column mapping
   const firstRow = jsonData[0];

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { createPhysicsTestAction } from "../actions";
 import Link from "next/link";
@@ -33,11 +34,11 @@ export function NewPhysicsTestForm({
           Dados do Teste
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select
+          <Combobox
             id="equipmentId"
             name="equipmentId"
             label="Equipamento *"
-            placeholder="Selecione o equipamento"
+            placeholder="Buscar equipamento..."
             options={equipments.map((eq) => ({
               value: eq.id,
               label: `${eq.name}${eq.patrimony ? ` (${eq.patrimony})` : ""}`,

@@ -87,6 +87,16 @@ export function PreventiveDetails({
     Record<string, { status: string; observation: string }>
   >({});
 
+  function markAllConforme() {
+    const allAnswers: Record<string, { status: string; observation: string }> = {};
+    for (const template of checklistTemplates) {
+      for (const item of template.items) {
+        allAnswers[item.id] = { status: "CONFORME", observation: "" };
+      }
+    }
+    setChecklistAnswers(allAnswers);
+  }
+
   const canExecute =
     maintenance.status === "AGENDADA" || maintenance.displayStatus === "VENCIDA";
 
@@ -176,9 +186,18 @@ export function PreventiveDetails({
 
             {checklistTemplates.length > 0 && (
               <div className="border-t pt-4">
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">
-                  Checklist de Verificacao
-                </h3>
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Checklist de Verificacao
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={markAllConforme}
+                    className="rounded-md bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 ring-1 ring-green-600/20 hover:bg-green-100 transition-colors"
+                  >
+                    Marcar Todos Conforme
+                  </button>
+                </div>
                 {checklistTemplates.map((template) => (
                   <div key={template.id} className="mb-4">
                     <p className="mb-2 text-sm font-medium text-gray-600">
@@ -199,7 +218,7 @@ export function PreventiveDetails({
                               name={`checklist_${item.id}_status`}
                               required
                               className="rounded border px-2 py-1 text-sm"
-                              defaultValue=""
+                              value={checklistAnswers[item.id]?.status || ""}
                               onChange={(e) =>
                                 setChecklistAnswers((prev) => ({
                                   ...prev,

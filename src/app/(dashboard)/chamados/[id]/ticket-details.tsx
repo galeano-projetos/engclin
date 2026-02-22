@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { acceptTicket, resolveTicket, closeTicket } from "../actions";
+import { suggestSolution, type AISuggestion } from "../ai-actions";
 import { SlaIndicator } from "../sla-indicator";
 import Link from "next/link";
 
@@ -105,7 +106,34 @@ export function TicketDetails({ ticket, eligibleUsers = [] }: { ticket: TicketDa
   const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<AISuggestion | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const router = useRouter();
+
+  async function handleSuggestSolution() {
+    setAiLoading(true);
+    setAiError(null);
+    const result = await suggestSolution(ticket.id);
+    if (result.error) {
+      setAiError(result.error);
+    } else if (result.suggestion) {
+      setAiSuggestion(result.suggestion);
+    }
+    setAiLoading(false);
+  }
+
+  function applySuggestion() {
+    if (!aiSuggestion) return;
+    // Fill form fields with the suggestion
+    const diagnosisEl = document.getElementById("diagnosis") as HTMLTextAreaElement | null;
+    const solutionEl = document.getElementById("solution") as HTMLTextAreaElement | null;
+    const partsEl = document.getElementById("partsUsed") as HTMLInputElement | null;
+    if (diagnosisEl) diagnosisEl.value = aiSuggestion.diagnosis;
+    if (solutionEl) solutionEl.value = aiSuggestion.solution;
+    if (partsEl) partsEl.value = aiSuggestion.partsUsed;
+    setAiSuggestion(null);
+  }
 
   async function handleAccept() {
     if (!selectedUserId) {
@@ -262,9 +290,70 @@ export function TicketDetails({ ticket, eligibleUsers = [] }: { ticket: TicketDa
       {/* Formulário de resolução */}
       {showResolveForm && (
         <div className="mt-6 rounded-lg border bg-green-50 p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            Resolver Chamado
-          </h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Resolver Chamado
+            </h2>
+            <button
+              type="button"
+              onClick={handleSuggestSolution}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 rounded-md bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 ring-1 ring-purple-600/20 hover:bg-purple-100 transition-colors disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Analisando...
+                </>
+              ) : (
+                "Sugerir Solucao (IA)"
+              )}
+            </button>
+          </div>
+
+          {aiError && (
+            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {aiError}
+            </div>
+          )}
+
+          {aiSuggestion && (
+            <div className="mb-4 rounded-md border border-purple-200 bg-purple-50 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-purple-800">Sugestao da IA</span>
+                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-600">
+                  Confianca: {aiSuggestion.confidence}
+                </span>
+              </div>
+              <div className="space-y-2 text-sm text-purple-900">
+                <p><strong>Diagnostico:</strong> {aiSuggestion.diagnosis}</p>
+                <p><strong>Solucao:</strong> {aiSuggestion.solution}</p>
+                {aiSuggestion.partsUsed && (
+                  <p><strong>Pecas:</strong> {aiSuggestion.partsUsed}</p>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={applySuggestion}
+                  className="rounded-md bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700 transition-colors"
+                >
+                  Aplicar nos campos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiSuggestion(null)}
+                  className="rounded-md bg-white px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 transition-colors"
+                >
+                  Descartar
+                </button>
+              </div>
+            </div>
+          )}
+
           <form action={handleResolve} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">

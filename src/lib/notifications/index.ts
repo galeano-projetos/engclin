@@ -77,5 +77,10 @@ export async function sendNotification(
     promises.push(sendWhatsAppNotification(payload));
   }
 
-  await Promise.allSettled(promises);
+  const results = await Promise.allSettled(promises);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("[Notification] Falha ao enviar:", result.reason);
+    }
+  }
 }

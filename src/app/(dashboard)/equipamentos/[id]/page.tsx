@@ -106,47 +106,57 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
     { type: "TESTE_RADIACAO_FUGA", label: "Radiação de Fuga" },
   ];
 
-  const physicsTests = await Promise.all(
-    physicsTestTypes.map(async ({ type, label }) => {
-      const lastExecuted = await prisma.medicalPhysicsTest.findFirst({
-        where: { equipmentId: id, tenantId, type, status: "REALIZADA" },
-        orderBy: { executionDate: "desc" },
-        select: { executionDate: true, provider: true, providerRef: { select: { name: true } } },
-      });
+  // Batch queries: 2 queries instead of 14 individual ones
+  const [allPhysicsTests, allPreventives] = await Promise.all([
+    prisma.medicalPhysicsTest.findMany({
+      where: { equipmentId: id, tenantId },
+      select: {
+        id: true, type: true, status: true, dueDate: true, executionDate: true,
+        provider: true, providerRef: { select: { name: true } },
+      },
+      orderBy: { dueDate: "desc" },
+    }),
+    prisma.preventiveMaintenance.findMany({
+      where: { equipmentId: id, tenantId },
+      select: {
+        id: true, serviceType: true, status: true, dueDate: true, executionDate: true,
+        provider: true, providerRef: { select: { name: true } },
+      },
+      orderBy: { dueDate: "desc" },
+    }),
+  ]);
 
-      const nextScheduled = await prisma.medicalPhysicsTest.findFirst({
-        where: { equipmentId: id, tenantId, type, status: "AGENDADA" },
-        orderBy: { dueDate: "asc" },
-        select: { id: true, dueDate: true, provider: true, providerRef: { select: { name: true } } },
-      });
+  // Process physics tests in memory
+  const physicsTests = physicsTestTypes.map(({ type, label }) => {
+    const lastExecuted = allPhysicsTests.find(t => t.type === type && t.status === "REALIZADA");
+    const nextScheduled = allPhysicsTests.find(t => t.type === type && t.status === "AGENDADA");
 
-      const providerName =
-        nextScheduled?.providerRef?.name ||
-        nextScheduled?.provider ||
-        lastExecuted?.providerRef?.name ||
-        lastExecuted?.provider ||
-        null;
+    const providerName =
+      nextScheduled?.providerRef?.name ||
+      nextScheduled?.provider ||
+      lastExecuted?.providerRef?.name ||
+      lastExecuted?.provider ||
+      null;
 
-      return {
-        testType: type,
-        label,
-        lastExecution: lastExecuted?.executionDate
-          ? lastExecuted.executionDate.toLocaleDateString("pt-BR")
-          : null,
-        nextDue: nextScheduled?.dueDate
-          ? nextScheduled.dueDate.toLocaleDateString("pt-BR")
-          : null,
-        providerName,
-        status: computeServiceStatus(nextScheduled?.dueDate || null, now),
-        testId: nextScheduled?.id || null,
-      };
-    })
-  );
+    return {
+      testType: type,
+      label,
+      lastExecution: lastExecuted?.executionDate
+        ? lastExecuted.executionDate.toLocaleDateString("pt-BR")
+        : null,
+      nextDue: nextScheduled?.dueDate
+        ? nextScheduled.dueDate.toLocaleDateString("pt-BR")
+        : null,
+      providerName,
+      status: computeServiceStatus(nextScheduled?.dueDate || null, now),
+      testId: nextScheduled?.id || null,
+    };
+  });
 
   // Only show physics section if equipment has any physics tests
   const hasPhysicsTests = physicsTests.some((t) => t.status !== "na");
 
-  // Build service status for each service type (filtered by plan)
+  // Process preventive maintenances in memory
   const allServiceTypes: { type: ServiceType; label: string }[] = [
     { type: "PREVENTIVA", label: "Preventiva" },
     { type: "CALIBRACAO", label: "Calibracao" },
@@ -154,63 +164,31 @@ export default async function EquipamentoDetailPage({ params }: PageProps) {
   ];
   const serviceTypes = allServiceTypes.filter(s => allowedServiceTypes.includes(s.type));
 
-  const services = await Promise.all(
-    serviceTypes.map(async ({ type, label }) => {
-      // Last executed
-      const lastExecuted = await prisma.preventiveMaintenance.findFirst({
-        where: {
-          equipmentId: id,
-          tenantId,
-          serviceType: type,
-          status: "REALIZADA",
-        },
-        orderBy: { executionDate: "desc" },
-        select: {
-          executionDate: true,
-          providerRef: { select: { name: true } },
-          provider: true,
-        },
-      });
+  const services = serviceTypes.map(({ type, label }) => {
+    const lastExecuted = allPreventives.find(p => p.serviceType === type && p.status === "REALIZADA");
+    const nextScheduled = allPreventives.find(p => p.serviceType === type && p.status === "AGENDADA");
 
-      // Next scheduled
-      const nextScheduled = await prisma.preventiveMaintenance.findFirst({
-        where: {
-          equipmentId: id,
-          tenantId,
-          serviceType: type,
-          status: "AGENDADA",
-        },
-        orderBy: { dueDate: "asc" },
-        select: {
-          id: true,
-          dueDate: true,
-          providerRef: { select: { name: true } },
-          provider: true,
-        },
-      });
+    const providerName =
+      nextScheduled?.providerRef?.name ||
+      nextScheduled?.provider ||
+      lastExecuted?.providerRef?.name ||
+      lastExecuted?.provider ||
+      null;
 
-      const providerName =
-        nextScheduled?.providerRef?.name ||
-        nextScheduled?.provider ||
-        lastExecuted?.providerRef?.name ||
-        lastExecuted?.provider ||
-        null;
-
-      return {
-        serviceType: type,
-        label,
-        lastExecution: lastExecuted?.executionDate
-          ? lastExecuted.executionDate.toLocaleDateString("pt-BR")
-          : null,
-        nextDue: nextScheduled?.dueDate
-          ? nextScheduled.dueDate.toLocaleDateString("pt-BR")
-          : null,
-        providerName,
-        status: computeServiceStatus(nextScheduled?.dueDate || null, now),
-        maintenanceId: nextScheduled?.id || null,
-      };
-    })
-  );
+    return {
+      serviceType: type,
+      label,
+      lastExecution: lastExecuted?.executionDate
+        ? lastExecuted.executionDate.toLocaleDateString("pt-BR")
+        : null,
+      nextDue: nextScheduled?.dueDate
+        ? nextScheduled.dueDate.toLocaleDateString("pt-BR")
+        : null,
+      providerName,
+      status: computeServiceStatus(nextScheduled?.dueDate || null, now),
+      maintenanceId: nextScheduled?.id || null,
+    };
+  });
 
   const canEdit = hasPermission(role, "equipment.edit");
 

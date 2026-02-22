@@ -56,12 +56,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role: string }).role;
-        token.tenantId = (user as { tenantId?: string }).tenantId;
-        token.tenantName = (user as { tenantName?: string }).tenantName;
-        token.plan = (user as { plan?: string }).plan;
-        token.mustChangePassword = (user as { mustChangePassword?: boolean }).mustChangePassword;
+        const u = user as {
+          id: string;
+          role: string;
+          tenantId?: string;
+          tenantName?: string;
+          plan?: string;
+          mustChangePassword?: boolean;
+        };
+        token.id = u.id;
+        token.role = u.role;
+        token.tenantId = u.tenantId;
+        token.tenantName = u.tenantName;
+        token.plan = u.plan;
+        token.mustChangePassword = u.mustChangePassword;
       } else if (token.mustChangePassword) {
         // Check DB to see if flag was cleared (after user changed password)
         const dbUser = await prisma.user.findUnique({

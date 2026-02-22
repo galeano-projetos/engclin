@@ -1,25 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/require-role";
-import { Badge } from "@/components/ui/badge";
+import { hasPermission } from "@/lib/auth/permissions";
 import { Button } from "@/components/ui/button";
 import { MaintenanceFilters } from "./maintenance-filters";
+import { MaintenanceListClient } from "./maintenance-list-client";
 import { Pagination } from "@/components/shared/pagination";
 import { MaintenanceStatus, ServiceType } from "@prisma/client";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import { getAllowedServiceTypes } from "@/lib/auth/plan-features";
 
-const statusLabels: Record<string, string> = {
-  AGENDADA: "Agendada",
-  REALIZADA: "Realizada",
-  VENCIDA: "Vencida",
-};
-
-const statusVariant: Record<string, "info" | "success" | "danger"> = {
-  AGENDADA: "info",
-  REALIZADA: "success",
-  VENCIDA: "danger",
-};
 
 const VALID_PER_PAGE = [20, 50, 100, 150, 200, 0];
 
@@ -35,7 +25,8 @@ interface PageProps {
 }
 
 export default async function ManutencoesPage({ searchParams }: PageProps) {
-  const { tenantId, plan } = await requirePermission("preventive.view");
+  const { tenantId, plan, role } = await requirePermission("preventive.view");
+  const canBulkExecute = hasPermission(role, "preventive.execute");
   const params = await searchParams;
   const { status, equipmentId, providerId } = params;
   const allowedServiceTypes = getAllowedServiceTypes(plan);
@@ -131,109 +122,22 @@ export default async function ManutencoesPage({ searchParams }: PageProps) {
 
       <MaintenanceFilters equipments={equipments} providers={providers} allowedServiceTypes={allowedServiceTypes} />
 
-      {/* Mobile: Cards */}
-      <div className="mt-4 space-y-3 lg:hidden">
-        {items.length === 0 ? (
-          <div className="rounded-lg border bg-white p-8 text-center text-sm text-gray-400">
-            Nenhuma manutencao encontrada.
-          </div>
-        ) : (
-          items.map((m) => (
-            <Link key={m.id} href={`/manutencoes/${m.id}`} className="block rounded-lg border bg-white p-4 shadow-sm active:bg-gray-50">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900">{m.equipment.name}</p>
-                  {m.equipment.patrimony && (
-                    <p className="text-xs text-gray-400">{m.equipment.patrimony}</p>
-                  )}
-                </div>
-                <Badge variant={statusVariant[m.displayStatus] || "info"}>
-                  {statusLabels[m.displayStatus] || m.displayStatus}
-                </Badge>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <Badge variant="muted">{serviceTypeLabel(m.serviceType)}</Badge>
-                <span className="text-sm text-gray-600">{m.type}</span>
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                {(m.providerRef?.name || m.provider) && <span>{m.providerRef?.name || m.provider}</span>}
-                <span>Agendada: {m.scheduledDate.toLocaleDateString("pt-BR")}</span>
-                <span>Vencimento: {m.dueDate.toLocaleDateString("pt-BR")}</span>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
-
-      {/* Desktop: Tabela */}
-      <div className="mt-4 hidden overflow-x-auto rounded-lg border bg-white shadow-sm lg:block">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-            <tr>
-              <th scope="col" className="px-4 py-3">Equipamento</th>
-              <th scope="col" className="px-4 py-3">Servico</th>
-              <th scope="col" className="px-4 py-3">Fornecedor</th>
-              <th scope="col" className="px-4 py-3">Data Agendada</th>
-              <th scope="col" className="px-4 py-3">Vencimento</th>
-              <th scope="col" className="px-4 py-3">Status</th>
-              <th scope="col" className="px-4 py-3"><span className="sr-only">Acoes</span></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                  Nenhuma manutencao encontrada.
-                </td>
-              </tr>
-            ) : (
-              items.map((m) => (
-                <tr key={m.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">
-                      {m.equipment.name}
-                    </div>
-                    {m.equipment.patrimony && (
-                      <div className="text-xs text-gray-400">
-                        {m.equipment.patrimony}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="muted">{serviceTypeLabel(m.serviceType)}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {m.providerRef?.name || m.provider || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {m.scheduledDate.toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {m.dueDate.toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant={
-                        statusVariant[m.displayStatus] || "info"
-                      }
-                    >
-                      {statusLabels[m.displayStatus] || m.displayStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/manutencoes/${m.id}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                    >
-                      Ver
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <MaintenanceListClient
+        items={items.map((m) => ({
+          id: m.id,
+          type: m.type,
+          serviceType: m.serviceType,
+          serviceTypeLabel: serviceTypeLabel(m.serviceType),
+          displayStatus: m.displayStatus,
+          scheduledDate: m.scheduledDate.toLocaleDateString("pt-BR"),
+          dueDate: m.dueDate.toLocaleDateString("pt-BR"),
+          equipmentName: m.equipment.name,
+          equipmentPatrimony: m.equipment.patrimony,
+          providerName: m.providerRef?.name || m.provider || null,
+          isScheduled: m.status === "AGENDADA",
+        }))}
+        canBulkExecute={canBulkExecute}
+      />
 
       {/* Paginacao */}
       <Pagination

@@ -80,7 +80,10 @@ export async function syncSeproradDocuments(
 
   const result: SyncResult = { updated: 0, created: 0, skipped: 0, errors: [] };
 
-  const client = new Client({ connectionString: seproradUrl });
+  const client = new Client({
+    connectionString: seproradUrl,
+    connectionTimeoutMillis: 10000,
+  });
 
   try {
     await client.connect();
@@ -141,75 +144,79 @@ export async function syncSeproradDocuments(
 
     // 5. Process each document
     for (const doc of docsResult.rows) {
-      // Skip if already synced
-      if (syncedDocIds.has(doc.id)) {
-        result.skipped++;
-        continue;
-      }
+      try {
+        // Skip if already synced
+        if (syncedDocIds.has(doc.id)) {
+          result.skipped++;
+          continue;
+        }
 
-      // Map document type
-      const testType = mapDocumentType(doc.nome);
-      if (!testType) {
-        result.skipped++;
-        continue;
-      }
+        // Map document type
+        const testType = mapDocumentType(doc.nome);
+        if (!testType) {
+          result.skipped++;
+          continue;
+        }
 
-      // Find equipment by serial
-      if (!doc.numero_serie) {
-        result.skipped++;
-        continue;
-      }
+        // Find equipment by serial
+        if (!doc.numero_serie) {
+          result.skipped++;
+          continue;
+        }
 
-      const equipmentId = serialToEquipmentId.get(normalizeSerial(doc.numero_serie));
-      if (!equipmentId) {
-        result.errors.push(`Equipamento com serie "${doc.numero_serie}" nao encontrado no engclin`);
-        continue;
-      }
+        const equipmentId = serialToEquipmentId.get(normalizeSerial(doc.numero_serie));
+        if (!equipmentId) {
+          result.errors.push(`Equipamento com serie "${doc.numero_serie}" nao encontrado no engclin`);
+          continue;
+        }
 
-      const reportUrl = `/api/seprorad-doc/${doc.id}`;
-      const executionDate = doc.data_emissao || new Date();
-      const dueDate = doc.data_validade || new Date();
-      const syncNote = `seprorad:${doc.id}`;
+        const reportUrl = `/api/seprorad-doc/${doc.id}`;
+        const executionDate = doc.data_emissao || new Date();
+        const dueDate = doc.data_validade || new Date();
+        const syncNote = `seprorad:${doc.id}`;
 
-      // Try to find an existing AGENDADA test for this equipment+type
-      const pendingTest = existingTests.find(
-        (t) => t.equipmentId === equipmentId && t.type === testType && t.status === "AGENDADA"
-      );
+        // Try to find an existing AGENDADA test for this equipment+type
+        const pendingTest = existingTests.find(
+          (t) => t.equipmentId === equipmentId && t.type === testType && t.status === "AGENDADA"
+        );
 
-      if (pendingTest) {
-        // Update existing test
-        await prisma.medicalPhysicsTest.update({
-          where: { id: pendingTest.id },
-          data: {
-            status: "REALIZADA",
-            executionDate,
-            dueDate,
-            reportUrl,
-            notes: `Sincronizado do portal Seprorad. ${syncNote}`,
-            provider: "Seprorad",
-          },
-        });
-        // Remove from existingTests so it won't match again
-        pendingTest.status = "REALIZADA";
-        result.updated++;
-      } else {
-        // Create new test
-        await prisma.medicalPhysicsTest.create({
-          data: {
-            tenantId,
-            equipmentId,
-            type: testType,
-            scheduledDate: executionDate,
-            dueDate,
-            executionDate,
-            status: "REALIZADA",
-            provider: "Seprorad",
-            reportUrl,
-            periodicityMonths: defaultPeriodicity(testType),
-            notes: `Sincronizado do portal Seprorad. ${syncNote}`,
-          },
-        });
-        result.created++;
+        if (pendingTest) {
+          // Update existing test
+          await prisma.medicalPhysicsTest.update({
+            where: { id: pendingTest.id },
+            data: {
+              status: "REALIZADA",
+              executionDate,
+              dueDate,
+              reportUrl,
+              notes: `Sincronizado do portal Seprorad. ${syncNote}`,
+              provider: "Seprorad",
+            },
+          });
+          // Remove from existingTests so it won't match again
+          pendingTest.status = "REALIZADA";
+          result.updated++;
+        } else {
+          // Create new test
+          await prisma.medicalPhysicsTest.create({
+            data: {
+              tenantId,
+              equipmentId,
+              type: testType,
+              scheduledDate: executionDate,
+              dueDate,
+              executionDate,
+              status: "REALIZADA",
+              provider: "Seprorad",
+              reportUrl,
+              periodicityMonths: defaultPeriodicity(testType),
+              notes: `Sincronizado do portal Seprorad. ${syncNote}`,
+            },
+          });
+          result.created++;
+        }
+      } catch (docError) {
+        result.errors.push(`Erro ao processar documento ${doc.id}: ${docError instanceof Error ? docError.message : String(docError)}`);
       }
     }
   } catch (error) {
