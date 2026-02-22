@@ -2,6 +2,7 @@
 
 import { SystemMockup } from "../components/system-mockup";
 import { CircuitCanvas } from "../components/circuit-canvas";
+import { VitalisLogo } from "@/components/ui/vitalis-logo";
 
 export function Hero() {
   return (
@@ -14,16 +15,12 @@ export function Hero() {
 
       {/* Content */}
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center px-4 text-center sm:px-6">
-        {/* Badge */}
+        {/* Logo */}
         <div
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-1.5 text-sm text-teal-300 opacity-0 backdrop-blur-sm"
+          className="mb-8 opacity-0"
           style={{ animation: "fade-in-up 0.6s ease-out 0.1s both" }}
         >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
-          </span>
-          Novo: Inteligência Preditiva com IA
+          <VitalisLogo size="xl" variant="white" />
         </div>
 
         {/* Title */}
