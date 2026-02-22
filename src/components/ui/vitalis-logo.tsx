@@ -3,6 +3,7 @@ import Image from "next/image";
 interface VitalisLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  variant?: "default" | "white";
 }
 
 const sizes = {
@@ -12,7 +13,7 @@ const sizes = {
   xl: { width: 380, height: 134 },
 };
 
-export function VitalisLogo({ className, size = "md" }: VitalisLogoProps) {
+export function VitalisLogo({ className, size = "md", variant = "default" }: VitalisLogoProps) {
   const { width, height } = sizes[size];
 
   return (
@@ -21,7 +22,7 @@ export function VitalisLogo({ className, size = "md" }: VitalisLogoProps) {
       alt="Vitalis - Clinical Asset Management"
       width={width}
       height={height}
-      className={className}
+      className={`${variant === "white" ? "brightness-0 invert" : ""} ${className ?? ""}`}
       priority
     />
   );

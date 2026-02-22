@@ -33,9 +33,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <a href="#" className="shrink-0">
-          <div className="inline-block rounded-lg bg-white p-1.5">
-            <VitalisLogo size="sm" />
-          </div>
+          <VitalisLogo size="sm" variant="white" />
         </a>
 
         {/* Desktop links */}
