@@ -10,7 +10,7 @@ const sizes = {
   sm: { width: 140, height: 49 },
   md: { width: 200, height: 70 },
   lg: { width: 280, height: 99 },
-  xl: { width: 380, height: 134 },
+  xl: { width: 323, height: 114 },
 };
 
 export function VitalisLogo({ className, size = "md", variant = "default" }: VitalisLogoProps) {
