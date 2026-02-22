@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
     }
     const authHeader = request.headers.get("asaas-access-token");
-    if (authHeader !== webhookToken) {
+    const isValid = authHeader && webhookToken.length === authHeader.length &&
+      timingSafeEqual(Buffer.from(authHeader), Buffer.from(webhookToken));
+    if (!isValid) {
       console.warn("[Asaas Webhook] Token invalido recebido");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

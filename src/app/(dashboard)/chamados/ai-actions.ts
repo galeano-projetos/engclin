@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { checkPermission } from "@/lib/auth/require-role";
 import { generateText } from "@/lib/ai/openai";
+import { Urgency } from "@prisma/client";
 
 export interface AISuggestion {
   diagnosis: string;
@@ -89,5 +90,40 @@ Com base no historico, sugira diagnostico e solucao para o chamado atual.`;
   } catch (error) {
     console.error("[suggestSolution] Erro:", error);
     return { error: "Erro ao gerar sugestao. Verifique se a API de IA esta configurada." };
+  }
+}
+
+export async function autoTriageTicket(
+  ticketId: string,
+  tenantId: string,
+  equipmentCriticality: string,
+  description: string
+): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  try {
+    const response = await generateText(
+      "Voce e um triador de chamados de engenharia clinica. Classifique a urgencia do chamado: BAIXA (nao afeta atendimento), MEDIA (impacto parcial), ALTA (risco ao atendimento), CRITICA (risco imediato a seguranca). Responda APENAS com a classificacao: BAIXA, MEDIA, ALTA ou CRITICA.",
+      `Criticidade do equipamento: ${equipmentCriticality === "A" ? "Critico" : equipmentCriticality === "B" ? "Moderado" : "Baixo"}\nDescricao do problema: ${description}`
+    );
+
+    const suggested = response.trim().toUpperCase();
+    const valid = ["BAIXA", "MEDIA", "ALTA", "CRITICA"];
+    if (valid.includes(suggested)) {
+      // Only upgrade urgency, never downgrade
+      const urgencyOrder: Record<string, number> = { BAIXA: 0, MEDIA: 1, ALTA: 2, CRITICA: 3 };
+      const current = await prisma.correctiveMaintenance.findFirst({
+        where: { id: ticketId, tenantId },
+        select: { urgency: true },
+      });
+      if (current && urgencyOrder[suggested] > urgencyOrder[current.urgency]) {
+        await prisma.correctiveMaintenance.update({
+          where: { id: ticketId },
+          data: { urgency: suggested as Urgency },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[autoTriage] Error:", error);
   }
 }

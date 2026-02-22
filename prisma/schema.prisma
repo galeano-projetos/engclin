@@ -54,6 +54,11 @@ model Tenant {
   trainings          Training[]
   trainingCompletions TrainingCompletion[]
   pgtsVersions       PgtsVersion[]
+  adverseEvents      AdverseEvent[]
+  nonConformities    NonConformity[]
+  improvementActions ImprovementAction[]
+  kpiTargets         KpiTarget[]
+  providerEvaluations ProviderEvaluation[]
 
   @@index([asaasCustomerId])
   @@index([asaasSubscriptionId])
@@ -96,6 +101,16 @@ model User {
   trainingCompletions TrainingCompletion[]
   // Versoes PGTS geradas
   pgtsVersions PgtsVersion[]
+  // Tecnovigilancia
+  reportedEvents AdverseEvent[] @relation("EventReporter")
+  closedEvents   AdverseEvent[] @relation("EventCloser")
+  // PDCA
+  identifiedNCs  NonConformity[] @relation("NCIdentifier")
+  closedNCs      NonConformity[] @relation("NCCloser")
+  responsibleActions ImprovementAction[] @relation("ActionResponsible")
+  verifiedActions    ImprovementAction[] @relation("ActionVerifier")
+  // Avaliacao de fornecedor
+  providerEvaluations ProviderEvaluation[] @relation("ProviderEvaluator")
 
   @@index([tenantId])
   @@map("users")
@@ -180,6 +195,7 @@ model Provider {
   equipmentTypesPreventiva  EquipmentType[] @relation("DefaultPreventivaProvider")
   equipmentTypesCalibracao  EquipmentType[] @relation("DefaultCalibracaoProvider")
   equipmentTypesTse         EquipmentType[] @relation("DefaultTseProvider")
+  evaluations               ProviderEvaluation[]
 
   @@index([tenantId])
   @@map("providers")
@@ -290,6 +306,7 @@ model Equipment {
   medicalPhysicsTests    MedicalPhysicsTest[]
   contractEquipments     ContractEquipment[]
   documents              EquipmentDocument[]
+  adverseEvents          AdverseEvent[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -709,5 +726,250 @@ model Lead {
   tenantId  String?
   createdAt DateTime @default(now())
 
+  @@index([email])
   @@map("leads")
+}
+
+// ============================================================
+// AUDIT LOG (Trilha de auditoria — ONA obrigatorio)
+// ============================================================
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  userId    String?
+  userName  String?
+  action    String   // CREATE, UPDATE, DELETE
+  entity    String   // equipment, ticket, maintenance, etc.
+  entityId  String
+  changes   Json?    // { field: { old, new } }
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// TECNOVIGILANCIA (Eventos adversos — ONA Nivel 1)
+// ============================================================
+model AdverseEvent {
+  id          String             @id @default(cuid())
+  tenantId    String
+  equipmentId String
+  reportedBy  String
+  eventDate   DateTime
+  description String
+  severity    AdverseEventSeverity
+  eventType   AdverseEventType
+  status      AdverseEventStatus @default(ABERTO)
+  investigation String?
+  rootCause     String?
+  correctiveAction String?
+  anvisaNotified   Boolean @default(false)
+  anvisaProtocol   String?
+  closedAt    DateTime?
+  closedBy    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  reporter  User      @relation("EventReporter", fields: [reportedBy], references: [id])
+  closer    User?     @relation("EventCloser", fields: [closedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([equipmentId])
+  @@map("adverse_events")
+}
+
+enum AdverseEventSeverity {
+  LEVE
+  MODERADO
+  GRAVE
+  OBITO
+}
+
+enum AdverseEventType {
+  MAU_FUNCIONAMENTO
+  LESAO_PACIENTE
+  LESAO_OPERADOR
+  QUASE_INCIDENTE
+  RECALL
+}
+
+enum AdverseEventStatus {
+  ABERTO
+  EM_INVESTIGACAO
+  NOTIFICADO_ANVISA
+  RESOLVIDO
+  FECHADO
+}
+
+// ============================================================
+// MELHORIA CONTINUA / PDCA (ONA Nivel 2)
+// ============================================================
+model NonConformity {
+  id          String              @id @default(cuid())
+  tenantId    String
+  title       String
+  description String
+  source      NonConformitySource
+  severity    NonConformitySeverity
+  status      NonConformityStatus @default(ABERTA)
+  identifiedBy String
+  identifiedAt DateTime @default(now())
+  relatedEntity   String?  // equipment, maintenance, ticket
+  relatedEntityId String?
+  rootCause    String?
+  closedAt     DateTime?
+  closedBy     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  identifier   User   @relation("NCIdentifier", fields: [identifiedBy], references: [id])
+  closerUser   User?  @relation("NCCloser", fields: [closedBy], references: [id])
+  actions      ImprovementAction[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("non_conformities")
+}
+
+model ImprovementAction {
+  id                String                @id @default(cuid())
+  tenantId          String
+  nonConformityId   String?
+  title             String
+  description       String
+  phase             PDCAPhase             @default(PLAN)
+  responsibleId     String
+  deadline          DateTime
+  completedAt       DateTime?
+  verificationNotes String?
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  status            ImprovementStatus     @default(PENDENTE)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nonConformity   NonConformity?  @relation(fields: [nonConformityId], references: [id], onDelete: SetNull)
+  responsible     User            @relation("ActionResponsible", fields: [responsibleId], references: [id])
+  verifier        User?           @relation("ActionVerifier", fields: [verifiedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([responsibleId])
+  @@map("improvement_actions")
+}
+
+enum NonConformitySource {
+  AUDITORIA_INTERNA
+  AUDITORIA_EXTERNA
+  CHAMADO_RECORRENTE
+  CHECKLIST_NAO_CONFORME
+  EVENTO_ADVERSO
+  INDICADOR_FORA_META
+  RECLAMACAO
+  OUTRO
+}
+
+enum NonConformitySeverity {
+  MENOR
+  MAIOR
+  CRITICA
+}
+
+enum NonConformityStatus {
+  ABERTA
+  EM_ANALISE
+  EM_TRATAMENTO
+  VERIFICACAO
+  FECHADA
+}
+
+enum PDCAPhase {
+  PLAN
+  DO
+  CHECK
+  ACT
+}
+
+enum ImprovementStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  VERIFICADA
+  CANCELADA
+}
+
+// ============================================================
+// METAS DE KPI (ONA Nivel 2)
+// ============================================================
+model KpiTarget {
+  id        String   @id @default(cuid())
+  tenantId  String
+  indicator String   // preventive_compliance, mttr_hours, mtbf_hours, availability, overdue_max
+  targetValue Float
+  unit      String   @default("%") // %, horas, dias, numero
+  year      Int
+  month     Int?     // null = meta anual
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, indicator, year, month])
+  @@index([tenantId])
+  @@map("kpi_targets")
+}
+
+// ============================================================
+// AVALIACAO DE FORNECEDOR (ONA Nivel 2)
+// ============================================================
+model ProviderEvaluation {
+  id         String   @id @default(cuid())
+  tenantId   String
+  providerId String
+  evaluatedBy String
+  period     String   // ex: "2026-01", "2025-Q4"
+  qualityScore    Int  // 1-5
+  timelinessScore Int  // 1-5
+  costScore       Int  // 1-5
+  communicationScore Int // 1-5
+  overallScore    Float
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  evaluator User    @relation("ProviderEvaluator", fields: [evaluatedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([providerId])
+  @@map("provider_evaluations")
+}
+
+// ============================================================
+// AI USAGE TRACKING (Controle de custos)
+// ============================================================
+model AiUsageLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  agent     String   // cost_benefit, predictive, root_cause, etc.
+  model     String   // gpt-4o-mini, gpt-4o, manus-1.6-lite
+  tokensIn  Int      @default(0)
+  tokensOut Int      @default(0)
+  costUsd   Float    @default(0)
+  durationMs Int     @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, agent])
+  @@map("ai_usage_logs")
 }

@@ -1,5 +1,3 @@
-import * as XLSX from "xlsx";
-
 export interface RawRow {
   setor?: string;
   equipamento?: string;
@@ -119,7 +117,8 @@ function normalizeHeader(h: string): string {
 
 const MAX_ROWS = 5000;
 
-export function parseExcel(buffer: ArrayBuffer): RawRow[] {
+export async function parseExcel(buffer: ArrayBuffer): Promise<RawRow[]> {
+  const XLSX = await import("xlsx");
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {

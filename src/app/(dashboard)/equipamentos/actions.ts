@@ -5,6 +5,7 @@ import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Criticality, DepreciationMethod, EquipmentStatus, OwnershipType } from "@prisma/client";
+import { logAudit } from "@/lib/audit";
 
 interface EquipmentFormData {
   name: string;
@@ -58,7 +59,7 @@ export async function createEquipmentAction(
 }
 
 export async function createEquipment(formData: FormData) {
-  const { tenantId, plan } = await checkPermission("equipment.create");
+  const { tenantId, userId, plan } = await checkPermission("equipment.create");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
@@ -83,7 +84,7 @@ export async function createEquipment(formData: FormData) {
     }
   }
 
-  await prisma.equipment.create({
+  const created = await prisma.equipment.create({
     data: {
       tenantId,
       unitId: data.unitId,
@@ -115,6 +116,8 @@ export async function createEquipment(formData: FormData) {
     },
   });
 
+  await logAudit({ tenantId, userId, action: "CREATE", entity: "equipment", entityId: created.id });
+
   revalidatePath("/equipamentos");
   redirect("/equipamentos");
 }
@@ -128,7 +131,7 @@ export async function updateEquipmentAction(
 }
 
 export async function updateEquipment(id: string, formData: FormData) {
-  const { tenantId, plan } = await checkPermission("equipment.edit");
+  const { tenantId, userId, plan } = await checkPermission("equipment.edit");
   const data = parseFormData(formData);
 
   if (!data.name || !data.unitId) {
@@ -185,12 +188,14 @@ export async function updateEquipment(id: string, formData: FormData) {
     },
   });
 
+  await logAudit({ tenantId, userId, action: "UPDATE", entity: "equipment", entityId: id });
+
   revalidatePath("/equipamentos");
   redirect("/equipamentos");
 }
 
 export async function deleteEquipment(id: string, reason?: string) {
-  const { tenantId } = await checkPermission("equipment.delete");
+  const { tenantId, userId } = await checkPermission("equipment.delete");
 
   await prisma.equipment.update({
     where: { id, tenantId },
@@ -200,6 +205,8 @@ export async function deleteEquipment(id: string, reason?: string) {
       deactivationReason: reason || undefined,
     },
   });
+
+  await logAudit({ tenantId, userId, action: "DELETE", entity: "equipment", entityId: id });
 
   revalidatePath("/equipamentos");
   redirect("/equipamentos");

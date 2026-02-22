@@ -12,9 +12,14 @@ export async function parseExcelAction(base64: string): Promise<{
 }> {
   await checkPermission("import.execute");
 
+  const MAX_IMPORT_SIZE = 10 * 1024 * 1024; // 10MB in base64
+  if (base64.length > MAX_IMPORT_SIZE) {
+    return { error: "Arquivo muito grande. Maximo 10MB." };
+  }
+
   try {
     const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0)).buffer;
-    const rows = parseExcel(buffer);
+    const rows = await parseExcel(buffer);
 
     if (rows.length === 0) {
       return { error: "Planilha vazia ou formato nao reconhecido." };

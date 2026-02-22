@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 import { sendNotification } from "@/lib/notifications";
 
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const key = authHeader?.replace("Bearer ", "");
 
-  if (!process.env.CRON_SECRET || key !== process.env.CRON_SECRET) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || !key || cronSecret.length !== key.length || !timingSafeEqual(Buffer.from(key), Buffer.from(cronSecret))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

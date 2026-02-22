@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { safeFormGet, urgencySchema } from "@/lib/validation";
 import { createServiceOrderInTx } from "@/lib/service-order";
+import { logAudit } from "@/lib/audit";
+import { autoTriageTicket } from "./ai-actions";
 
 export async function createTicketAction(
   _prevState: { error?: string } | undefined,
@@ -46,7 +48,7 @@ export async function createTicket(formData: FormData) {
   const slaMinutes = { A: 10, B: 120, C: 1440 }; // A=10min, B=2h, C=24h
   const slaDeadline = new Date(now.getTime() + slaMinutes[equipment.criticality] * 60_000);
 
-  await prisma.$transaction(async (tx) => {
+  const createdTicket = await prisma.$transaction(async (tx) => {
     const ticket = await tx.correctiveMaintenance.create({
       data: {
         tenantId,
@@ -67,7 +69,14 @@ export async function createTicket(formData: FormData) {
     await createServiceOrderInTx(tx, tenantId, {
       correctiveMaintenanceId: ticket.id,
     });
+
+    return ticket;
   });
+
+  await logAudit({ tenantId, userId, action: "CREATE", entity: "ticket", entityId: createdTicket.id });
+
+  // Auto-triage in background (non-blocking)
+  autoTriageTicket(createdTicket.id, tenantId, equipment.criticality, description).catch(() => {});
 
   revalidatePath("/chamados");
   revalidatePath("/ordens-servico");
@@ -103,7 +112,7 @@ export async function acceptTicket(id: string, assignedToId: string) {
 }
 
 export async function resolveTicket(id: string, formData: FormData) {
-  const { tenantId } = await checkPermission("ticket.resolve");
+  const { tenantId, userId } = await checkPermission("ticket.resolve");
 
   const diagnosis = safeFormGet(formData, "diagnosis") || undefined;
   const solution = safeFormGet(formData, "solution");
@@ -160,6 +169,8 @@ export async function resolveTicket(id: string, formData: FormData) {
   });
 
   await invalidatePhysicsTests(tenantId, ticket.equipmentId);
+
+  await logAudit({ tenantId, userId, action: "UPDATE", entity: "ticket", entityId: id });
 
   revalidatePath("/chamados");
   revalidatePath("/fisica-medica");

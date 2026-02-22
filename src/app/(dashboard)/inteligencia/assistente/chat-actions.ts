@@ -116,7 +116,7 @@ export async function createTicketFromChat(
       });
 
       await tx.equipment.update({
-        where: { id: equipmentId },
+        where: { id: equipmentId, tenantId },
         data: { status: "EM_MANUTENCAO" },
       });
 

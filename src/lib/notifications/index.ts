@@ -3,12 +3,14 @@
  *
  * Infraestrutura para alertas automáticos via:
  * 1. Sistema interno (painel de notificações)
- * 2. E-mail (via serviço transacional)
+ * 2. E-mail (via Resend)
  * 3. WhatsApp (via API)
  *
  * Os provedores de e-mail e WhatsApp serão configurados via variáveis de ambiente.
  * Esta camada abstrai o envio para que a troca de provedor seja transparente.
  */
+
+import { Resend } from "resend";
 
 export interface NotificationPayload {
   tenantId: string;
@@ -20,25 +22,37 @@ export interface NotificationPayload {
   metadata?: Record<string, string>;
 }
 
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+}
+
 /**
- * Envia notificação por e-mail.
- * Em produção, integrar com SendGrid, Resend, AWS SES, etc.
+ * Envia notificação por e-mail via Resend.
+ * Quando RESEND_API_KEY não está configurada, loga no console como stub.
  */
 export async function sendEmailNotification(
   payload: NotificationPayload
 ): Promise<boolean> {
-  // TODO: Integrar com serviço de e-mail transacional
-  // Exemplo com Resend:
-  // const resend = new Resend(process.env.RESEND_API_KEY);
-  // await resend.emails.send({
-  //   from: 'Vitalis <alertas@vitalis.com>',
-  //   to: payload.recipientEmail,
-  //   subject: payload.subject,
-  //   html: payload.message,
-  // });
+  const resend = getResend();
+  if (!resend || !payload.recipientEmail) {
+    console.log(`[EMAIL] (stub) Para: ${payload.recipientEmail} | Assunto: ${payload.subject}`);
+    return true;
+  }
 
-  console.log(`[EMAIL] Para: ${payload.recipientEmail} | Assunto: ${payload.subject}`);
-  return true;
+  try {
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || "Vitalis <noreply@vitalis.app>",
+      to: payload.recipientEmail,
+      subject: payload.subject,
+      text: payload.message,
+    });
+    return true;
+  } catch (error) {
+    console.error("[EMAIL] Erro ao enviar:", error);
+    return false;
+  }
 }
 
 /**
@@ -57,7 +71,7 @@ export async function sendWhatsAppNotification(
   //   to: `whatsapp:${payload.recipientPhone}`,
   // });
 
-  console.log(`[WHATSAPP] Para: ${payload.recipientPhone} | Msg: ${payload.subject}`);
+  console.log(`[WHATSAPP] (stub) Para: ${payload.recipientPhone} | Assunto: ${payload.subject}`);
   return true;
 }
 

@@ -37,6 +37,8 @@ export function DashboardShell({
       { id: "fisica", label: "Fisica Medica", href: "/fisica-medica", perm: "physics.view" },
       { id: "relatorios", label: "Relatorios", href: "/relatorios", perm: "report.view" },
       { id: "treinamentos", label: "Treinamentos", href: "/treinamentos", perm: "training.view" },
+      { id: "tecnovigilancia", label: "Tecnovigilancia", href: "/tecnovigilancia", perm: "ticket.view" },
+      { id: "melhoria", label: "Melhoria Continua", href: "/melhoria", perm: "ticket.view" },
       { id: "ia", label: "Inteligencia Artificial", href: "/inteligencia", perm: "ai.view" },
       { id: "admin", label: "Administracao", href: "/admin", perm: "admin.view" },
     ];
@@ -52,6 +54,8 @@ export function DashboardShell({
       { id: "novo-chamado", label: "Novo Chamado", href: "/chamados/novo", perm: "ticket.create" },
       { id: "nova-preventiva", label: "Nova Preventiva", href: "/manutencoes/nova", perm: "preventive.create" },
       { id: "novo-equipamento", label: "Novo Equipamento", href: "/equipamentos/novo", perm: "equipment.create" },
+      { id: "novo-evento-adverso", label: "Novo Evento Adverso", href: "/tecnovigilancia/novo", perm: "ticket.create" },
+      { id: "nova-nc", label: "Nova Nao Conformidade", href: "/melhoria/nova-nc", perm: "ticket.create" },
     ];
 
     for (const action of actions) {

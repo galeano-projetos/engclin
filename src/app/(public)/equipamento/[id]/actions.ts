@@ -2,9 +2,16 @@
 
 import { prisma } from "@/lib/db";
 import { createServiceOrderInTx } from "@/lib/service-order";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function reportPublicProblem(formData: FormData) {
   const equipmentId = formData.get("equipmentId") as string;
+
+  const rl = checkRateLimit({ key: `public-report:${equipmentId}`, limit: 5, windowSeconds: 3600 });
+  if (!rl.allowed) {
+    return { error: "Muitas tentativas. Aguarde antes de reportar novamente." };
+  }
+
   const reporterName = (formData.get("reporterName") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim() || "";

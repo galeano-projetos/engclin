@@ -853,3 +853,338 @@ Seja especifico e cite os numeros das normas quando possivel.`
 
   return { equipmentType, complianceAnalysis };
 }
+
+// ============================================================
+// Agente 11: Otimização de Cronograma (GPT-4o-mini)
+// ============================================================
+
+export interface ScheduleOptimizationInsight {
+  equipmentTypeName: string;
+  serviceType: string;
+  currentPeriodicity: number;
+  suggestedPeriodicity: number;
+  reasoning: string;
+  affectedCount: number;
+}
+
+export async function runScheduleOptimizationAgent(): Promise<ScheduleOptimizationInsight[]> {
+  const { tenantId } = await checkPermission("ai.view");
+
+  // Get equipment types with their periodicities and failure data
+  const types = await prisma.equipmentType.findMany({
+    where: { tenantId },
+    include: {
+      equipments: {
+        where: { status: { not: "DESCARTADO" } },
+        include: {
+          correctiveMaintenances: {
+            where: { status: { in: ["RESOLVIDO", "FECHADO"] } },
+            select: { openedAt: true },
+          },
+          preventiveMaintenances: {
+            where: { status: "REALIZADA" },
+            select: { executionDate: true },
+          },
+        },
+      },
+    },
+  });
+
+  const insights: ScheduleOptimizationInsight[] = [];
+
+  for (const type of types) {
+    if (type.equipments.length === 0) continue;
+
+    const totalCorrectivas = type.equipments.reduce(
+      (sum, eq) => sum + eq.correctiveMaintenances.length, 0
+    );
+    const totalPreventivas = type.equipments.reduce(
+      (sum, eq) => sum + eq.preventiveMaintenances.length, 0
+    );
+    const avgCorrectivasPerUnit = totalCorrectivas / type.equipments.length;
+
+    const periodicityMap: Record<string, number> = {
+      TRIMESTRAL: 3, SEMESTRAL: 6, ANUAL: 12, BIENAL: 24, QUINQUENAL: 60, NAO_APLICAVEL: 0,
+    };
+    const currentMonths = periodicityMap[type.preventivaPeriodicity] || 12;
+
+    if (currentMonths === 0) continue;
+
+    let suggestedMonths = currentMonths;
+    let reasoning = "";
+
+    if (avgCorrectivasPerUnit >= 3 && totalPreventivas > 0) {
+      suggestedMonths = Math.max(3, Math.floor(currentMonths * 0.5));
+      reasoning = `Alta taxa de corretivas (${avgCorrectivasPerUnit.toFixed(1)}/unidade). Reduzir periodicidade para prevenir falhas.`;
+    } else if (avgCorrectivasPerUnit < 0.5 && totalPreventivas >= type.equipments.length * 2) {
+      suggestedMonths = Math.min(24, Math.floor(currentMonths * 1.5));
+      reasoning = `Baixa taxa de corretivas (${avgCorrectivasPerUnit.toFixed(1)}/unidade). Possivel esticar periodicidade com economia.`;
+    } else {
+      reasoning = `Periodicidade atual adequada para o perfil de falhas.`;
+    }
+
+    if (suggestedMonths !== currentMonths) {
+      const enrichedReasoning = await tryLLM(
+        () => generateText(
+          "Voce e um engenheiro clinico. Responda em portugues, 2-3 frases. Nao use markdown.",
+          `Tipo: ${type.name}\nPeriodicidade atual: ${currentMonths} meses\nSugerida: ${suggestedMonths} meses\nCorretivas/unidade: ${avgCorrectivasPerUnit.toFixed(1)}\nTotal unidades: ${type.equipments.length}\nJustifique a mudanca de periodicidade.`
+        ),
+        reasoning
+      );
+
+      insights.push({
+        equipmentTypeName: type.name,
+        serviceType: "PREVENTIVA",
+        currentPeriodicity: currentMonths,
+        suggestedPeriodicity: suggestedMonths,
+        reasoning: enrichedReasoning,
+        affectedCount: type.equipments.length,
+      });
+    }
+  }
+
+  return insights;
+}
+
+// ============================================================
+// Agente 12: Análise de Gap ONA (GPT-4o-mini)
+// ============================================================
+
+export interface ONAGapItem {
+  requirement: string;
+  level: string;
+  status: "conforme" | "parcial" | "nao_conforme";
+  score: number;
+  detail: string;
+}
+
+export interface ONAGapAnalysis {
+  overallScore: number;
+  level1Score: number;
+  level2Score: number;
+  items: ONAGapItem[];
+  summary: string;
+}
+
+export async function runONAGapAgent(): Promise<ONAGapAnalysis> {
+  const { tenantId } = await checkPermission("ai.view");
+
+  const now = new Date();
+
+  // Gather all data needed for ONA gap analysis
+  const [
+    totalEquipments,
+    equipmentsWithPhoto,
+    totalPreventives,
+    executedPreventives,
+    overduePreventives,
+    totalTickets,
+    resolvedTickets,
+    trainings,
+    completedTrainings,
+    adverseEvents,
+    nonConformities,
+    kpiTargets,
+    checklistResults,
+    nonConformeItems,
+  ] = await Promise.all([
+    prisma.equipment.count({ where: { tenantId, status: { not: "DESCARTADO" } } }),
+    prisma.equipment.count({ where: { tenantId, status: { not: "DESCARTADO" }, photoData: { not: null } } }),
+    prisma.preventiveMaintenance.count({ where: { tenantId } }),
+    prisma.preventiveMaintenance.count({ where: { tenantId, status: "REALIZADA" } }),
+    prisma.preventiveMaintenance.count({ where: { tenantId, status: "AGENDADA", dueDate: { lt: now } } }),
+    prisma.correctiveMaintenance.count({ where: { tenantId } }),
+    prisma.correctiveMaintenance.count({ where: { tenantId, status: { in: ["RESOLVIDO", "FECHADO"] } } }),
+    prisma.training.count({ where: { tenantId } }),
+    prisma.trainingCompletion.count({ where: { tenantId } }),
+    prisma.adverseEvent.count({ where: { tenantId } }),
+    prisma.nonConformity.count({ where: { tenantId } }),
+    prisma.kpiTarget.count({ where: { tenantId } }),
+    prisma.checklistResult.count({ where: { tenantId } }),
+    prisma.checklistResultItem.count({ where: { result: { tenantId }, status: "NAO_CONFORME" } }),
+  ]);
+
+  const preventiveCompliance = totalPreventives > 0 ? (executedPreventives / totalPreventives * 100) : 0;
+
+  const items: ONAGapItem[] = [];
+
+  // Level 1 checks
+  items.push({
+    requirement: "Inventario completo de equipamentos",
+    level: "1",
+    status: totalEquipments > 0 ? "conforme" : "nao_conforme",
+    score: totalEquipments > 0 ? 100 : 0,
+    detail: `${totalEquipments} equipamentos cadastrados`,
+  });
+
+  items.push({
+    requirement: "Planos de manutencao preventiva",
+    level: "1",
+    status: totalPreventives > 0 ? (overduePreventives === 0 ? "conforme" : "parcial") : "nao_conforme",
+    score: totalPreventives > 0 ? Math.max(0, 100 - (overduePreventives / Math.max(totalPreventives, 1) * 100)) : 0,
+    detail: `${executedPreventives} executadas, ${overduePreventives} vencidas de ${totalPreventives} total`,
+  });
+
+  items.push({
+    requirement: "Registros de manutencao corretiva",
+    level: "1",
+    status: totalTickets > 0 ? "conforme" : "parcial",
+    score: totalTickets > 0 ? 100 : 50,
+    detail: `${resolvedTickets} resolvidos de ${totalTickets} total`,
+  });
+
+  items.push({
+    requirement: "Registros de treinamento",
+    level: "1",
+    status: trainings > 0 && completedTrainings > 0 ? "conforme" : trainings > 0 ? "parcial" : "nao_conforme",
+    score: trainings > 0 ? (completedTrainings > 0 ? 100 : 50) : 0,
+    detail: `${trainings} treinamentos, ${completedTrainings} conclusoes`,
+  });
+
+  items.push({
+    requirement: "Tecnovigilancia (eventos adversos)",
+    level: "1",
+    status: adverseEvents > 0 ? "conforme" : "parcial",
+    score: adverseEvents >= 0 ? 80 : 40,
+    detail: adverseEvents > 0 ? `${adverseEvents} eventos registrados` : "Modulo disponivel, nenhum evento registrado",
+  });
+
+  items.push({
+    requirement: "Indicadores de qualidade (MTBF/MTTR)",
+    level: "1",
+    status: resolvedTickets >= 2 ? "conforme" : "parcial",
+    score: resolvedTickets >= 2 ? 100 : 50,
+    detail: `MTBF/MTTR calculados a partir de ${resolvedTickets} chamados`,
+  });
+
+  // Level 2 checks
+  items.push({
+    requirement: "Melhoria continua (PDCA)",
+    level: "2",
+    status: nonConformities > 0 ? "conforme" : "nao_conforme",
+    score: nonConformities > 0 ? 100 : 0,
+    detail: nonConformities > 0 ? `${nonConformities} nao-conformidades registradas` : "Nenhum registro de PDCA",
+  });
+
+  items.push({
+    requirement: "Metas de indicadores",
+    level: "2",
+    status: kpiTargets > 0 ? "conforme" : "nao_conforme",
+    score: kpiTargets > 0 ? 100 : 0,
+    detail: kpiTargets > 0 ? `${kpiTargets} metas definidas` : "Nenhuma meta configurada",
+  });
+
+  items.push({
+    requirement: "Checklists de manutencao",
+    level: "2",
+    status: checklistResults > 0 ? "conforme" : "parcial",
+    score: checklistResults > 0 ? 100 : 30,
+    detail: `${checklistResults} checklists preenchidos, ${nonConformeItems} itens nao conformes`,
+  });
+
+  items.push({
+    requirement: "Taxa de cumprimento preventivas",
+    level: "2",
+    status: preventiveCompliance >= 80 ? "conforme" : preventiveCompliance >= 50 ? "parcial" : "nao_conforme",
+    score: Math.round(preventiveCompliance),
+    detail: `${preventiveCompliance.toFixed(1)}% das preventivas executadas`,
+  });
+
+  const level1Items = items.filter(i => i.level === "1");
+  const level2Items = items.filter(i => i.level === "2");
+  const level1Score = level1Items.reduce((s, i) => s + i.score, 0) / level1Items.length;
+  const level2Score = level2Items.reduce((s, i) => s + i.score, 0) / level2Items.length;
+  const overallScore = items.reduce((s, i) => s + i.score, 0) / items.length;
+
+  const dataForAI = items.map(i => `${i.requirement}: ${i.status} (${i.score}%) - ${i.detail}`).join("\n");
+
+  const summary = await tryLLM(
+    () => generateText(
+      "Voce e um consultor de acreditacao ONA hospitalar. Analise os dados e gere um resumo executivo de 3-4 frases sobre o estado de conformidade. Portugues brasileiro. Nao use markdown.",
+      `Dados de conformidade ONA:\n${dataForAI}\n\nScore Nivel 1: ${level1Score.toFixed(0)}%\nScore Nivel 2: ${level2Score.toFixed(0)}%\n\nGere um resumo com os principais gaps e prioridades.`
+    ),
+    `Score geral: ${overallScore.toFixed(0)}%. Nivel 1: ${level1Score.toFixed(0)}%, Nivel 2: ${level2Score.toFixed(0)}%.`
+  );
+
+  return { overallScore: Math.round(overallScore), level1Score: Math.round(level1Score), level2Score: Math.round(level2Score), items, summary };
+}
+
+// ============================================================
+// Agente 13: Projeção TCO (GPT-4o-mini)
+// ============================================================
+
+export interface TCOInsight {
+  equipmentId: string;
+  equipmentName: string;
+  patrimony: string | null;
+  acquisitionValue: number;
+  totalMaintenanceCost: number;
+  currentBookValue: number;
+  projectedCost5Years: number;
+  replacementRecommended: boolean;
+  analysis: string;
+}
+
+export async function runTCOAgent(): Promise<TCOInsight[]> {
+  const { tenantId } = await checkPermission("ai.view");
+
+  const equipments = await prisma.equipment.findMany({
+    where: {
+      tenantId,
+      status: { not: "DESCARTADO" },
+      acquisitionValue: { not: null },
+      acquisitionDate: { not: null },
+    },
+    include: {
+      preventiveMaintenances: { where: { status: "REALIZADA", cost: { not: null } }, select: { cost: true } },
+      correctiveMaintenances: { where: { status: { in: ["RESOLVIDO", "FECHADO"] } }, select: { cost: true } },
+    },
+  });
+
+  const insights: TCOInsight[] = [];
+
+  for (const eq of equipments) {
+    const acqVal = Number(eq.acquisitionValue) || 0;
+    if (acqVal <= 0) continue;
+
+    const prevCost = eq.preventiveMaintenances.reduce((s, m) => s + (m.cost ? Number(m.cost) : 0), 0);
+    const corrCost = eq.correctiveMaintenances.reduce((s, m) => s + (m.cost ? Number(m.cost) : 0), 0);
+    const totalMaint = prevCost + corrCost;
+
+    const ageYears = (Date.now() - eq.acquisitionDate!.getTime()) / (365.25 * 24 * 3600000);
+    const annualMaintCost = ageYears > 0 ? totalMaint / ageYears : 0;
+    const projected5Years = annualMaintCost * 5;
+
+    const vidaUtil = eq.vidaUtilAnos || 10;
+    const depRate = 1 / vidaUtil;
+    const residual = eq.valorResidual ? Number(eq.valorResidual) : 0;
+    const depreciableAmount = acqVal - residual;
+    const accumulated = Math.min(depRate * ageYears * depreciableAmount, depreciableAmount);
+    const bookValue = Math.max(acqVal - accumulated, residual);
+
+    const replacementRecommended = projected5Years > acqVal * 0.6 || (ageYears > vidaUtil && totalMaint > acqVal * 0.5);
+
+    const analysis = await tryLLM(
+      () => generateText(
+        "Voce e um engenheiro clinico. Responda em portugues, 2-3 frases. Nao use markdown.",
+        `Equipamento: ${eq.name} (${eq.brand || ""} ${eq.model || ""})\nValor aquisicao: R$${acqVal.toFixed(0)}\nIdade: ${ageYears.toFixed(1)} anos (vida util: ${vidaUtil})\nCusto manutencao total: R$${totalMaint.toFixed(0)}\nCusto anual medio: R$${annualMaintCost.toFixed(0)}\nProjecao 5 anos: R$${projected5Years.toFixed(0)}\nValor contabil: R$${bookValue.toFixed(0)}\nAnalise o TCO e recomende manter ou substituir.`
+      ),
+      replacementRecommended ? "Custo projetado elevado. Avaliar substituicao." : "TCO dentro do aceitavel."
+    );
+
+    insights.push({
+      equipmentId: eq.id,
+      equipmentName: eq.name,
+      patrimony: eq.patrimony,
+      acquisitionValue: acqVal,
+      totalMaintenanceCost: totalMaint,
+      currentBookValue: bookValue,
+      projectedCost5Years: projected5Years,
+      replacementRecommended,
+      analysis,
+    });
+  }
+
+  insights.sort((a, b) => (b.projectedCost5Years / b.acquisitionValue) - (a.projectedCost5Years / a.acquisitionValue));
+  return insights.slice(0, 15);
+}

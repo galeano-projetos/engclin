@@ -334,22 +334,28 @@ function generateRandomPassword(): string {
   const special = "!@#$%&*";
   const all = upper + lower + digits + special;
 
-  // Garantir ao menos 1 de cada tipo
-  let password =
-    upper[Math.floor(Math.random() * upper.length)] +
-    lower[Math.floor(Math.random() * lower.length)] +
-    digits[Math.floor(Math.random() * digits.length)] +
-    special[Math.floor(Math.random() * special.length)];
+  const bytes = crypto.randomBytes(12);
 
-  for (let i = password.length; i < 12; i++) {
-    password += all[Math.floor(Math.random() * all.length)];
+  // Garantir ao menos 1 de cada tipo
+  let chars: string[] = [
+    upper[bytes[0] % upper.length],
+    lower[bytes[1] % lower.length],
+    digits[bytes[2] % digits.length],
+    special[bytes[3] % special.length],
+  ];
+
+  for (let i = 4; i < 12; i++) {
+    chars.push(all[bytes[i] % all.length]);
   }
 
-  // Embaralhar
-  return password
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
+  // Fisher-Yates shuffle com crypto
+  const shuffleBytes = crypto.randomBytes(chars.length);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = shuffleBytes[i] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join("");
 }
 
 export async function resetUserPassword(userId: string) {

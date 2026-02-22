@@ -1,7 +1,6 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getTenantId } from "@/lib/tenant";
 
 /**
  * Dados agregados para os graficos do dashboard avancado.
@@ -67,9 +66,7 @@ const monthNames = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
-export async function getEquipmentByStatus(): Promise<EquipmentByStatusData[]> {
-  const tenantId = await getTenantId();
-
+export async function getEquipmentByStatus(tenantId: string): Promise<EquipmentByStatusData[]> {
   const result = await prisma.equipment.groupBy({
     by: ["status"],
     where: { tenantId },
@@ -82,9 +79,7 @@ export async function getEquipmentByStatus(): Promise<EquipmentByStatusData[]> {
   }));
 }
 
-export async function getEquipmentByCriticality(): Promise<EquipmentByCriticalityData[]> {
-  const tenantId = await getTenantId();
-
+export async function getEquipmentByCriticality(tenantId: string): Promise<EquipmentByCriticalityData[]> {
   const result = await prisma.equipment.groupBy({
     by: ["criticality"],
     where: { tenantId, status: { not: "DESCARTADO" } },
@@ -97,8 +92,7 @@ export async function getEquipmentByCriticality(): Promise<EquipmentByCriticalit
   }));
 }
 
-export async function getMaintenanceByMonth(): Promise<MaintenanceByMonthData[]> {
-  const tenantId = await getTenantId();
+export async function getMaintenanceByMonth(tenantId: string): Promise<MaintenanceByMonthData[]> {
   const now = new Date();
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
@@ -150,9 +144,7 @@ export async function getMaintenanceByMonth(): Promise<MaintenanceByMonthData[]>
   return months;
 }
 
-export async function getTicketsByUrgency(): Promise<TicketsByUrgencyData[]> {
-  const tenantId = await getTenantId();
-
+export async function getTicketsByUrgency(tenantId: string): Promise<TicketsByUrgencyData[]> {
   const result = await prisma.correctiveMaintenance.groupBy({
     by: ["urgency"],
     where: {
@@ -168,8 +160,7 @@ export async function getTicketsByUrgency(): Promise<TicketsByUrgencyData[]> {
   }));
 }
 
-export async function getCalibrationStatus(): Promise<CalibrationStatusData[]> {
-  const tenantId = await getTenantId();
+export async function getCalibrationStatus(tenantId: string): Promise<CalibrationStatusData[]> {
   const now = new Date();
 
   const scheduled = await prisma.preventiveMaintenance.findMany({
@@ -206,8 +197,7 @@ export async function getCalibrationStatus(): Promise<CalibrationStatusData[]> {
   ].filter((d) => d.count > 0);
 }
 
-export async function getServiceTypeStatus(): Promise<ServiceTypeStatusData[]> {
-  const tenantId = await getTenantId();
+export async function getServiceTypeStatus(tenantId: string): Promise<ServiceTypeStatusData[]> {
   const now = new Date();
 
   const types = [

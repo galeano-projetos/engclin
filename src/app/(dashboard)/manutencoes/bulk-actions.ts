@@ -15,9 +15,17 @@ export async function bulkExecutePreventives(formData: FormData): Promise<{ erro
     return { error: "Selecione manutencoes e informe a data de execucao." };
   }
 
-  const maintenanceIds = JSON.parse(idsRaw) as string[];
-  if (maintenanceIds.length === 0) {
-    return { error: "Selecione ao menos uma manutencao." };
+  let maintenanceIds: string[];
+  try {
+    maintenanceIds = JSON.parse(idsRaw);
+  } catch {
+    return { error: "Dados invalidos." };
+  }
+  if (!Array.isArray(maintenanceIds) || maintenanceIds.length === 0) {
+    return { error: "Nenhuma manutencao selecionada." };
+  }
+  if (maintenanceIds.length > 100) {
+    return { error: "Maximo de 100 manutencoes por operacao." };
   }
 
   // Fetch all selected maintenances (only AGENDADA ones)

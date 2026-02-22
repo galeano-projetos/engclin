@@ -52,34 +52,47 @@ interface PageProps {
   searchParams: Promise<{
     status?: TicketStatus;
     urgency?: Urgency;
+    page?: string;
   }>;
 }
+
+const PAGE_SIZE = 20;
 
 export default async function ChamadosPage({ searchParams }: PageProps) {
   const { tenantId, role } = await requirePermission("ticket.view");
   const canCreate = hasPermission(role, "ticket.create");
   const params = await searchParams;
   const { status, urgency } = params;
+  const currentPage = Math.max(1, parseInt(params.page || "1", 10) || 1);
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
-  const tickets = await prisma.correctiveMaintenance.findMany({
-    where: {
-      tenantId,
-      ...(status && { status }),
-      ...(urgency && { urgency }),
-    },
-    select: {
-      id: true,
-      description: true,
-      urgency: true,
-      status: true,
-      openedAt: true,
-      slaDeadline: true,
-      equipment: { select: { name: true, patrimony: true, criticality: true } },
-      openedBy: { select: { name: true } },
-      assignedTo: { select: { name: true } },
-    },
-    orderBy: { openedAt: "desc" },
-  });
+  const whereClause = {
+    tenantId,
+    ...(status && { status }),
+    ...(urgency && { urgency }),
+  };
+
+  const [tickets, totalCount] = await Promise.all([
+    prisma.correctiveMaintenance.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        description: true,
+        urgency: true,
+        status: true,
+        openedAt: true,
+        slaDeadline: true,
+        equipment: { select: { name: true, patrimony: true, criticality: true } },
+        openedBy: { select: { name: true } },
+        assignedTo: { select: { name: true } },
+      },
+      orderBy: { openedAt: "desc" },
+      take: PAGE_SIZE,
+      skip,
+    }),
+    prisma.correctiveMaintenance.count({ where: whereClause }),
+  ]);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div>
@@ -87,7 +100,7 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Chamados</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {tickets.length} chamado{tickets.length !== 1 && "s"} encontrado{tickets.length !== 1 && "s"}
+            {totalCount} chamado{totalCount !== 1 && "s"} encontrado{totalCount !== 1 && "s"}
           </p>
         </div>
         {canCreate && (
@@ -209,6 +222,32 @@ export default async function ChamadosPage({ searchParams }: PageProps) {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Pagina {currentPage} de {totalPages} ({totalCount} chamados)
+          </p>
+          <div className="flex gap-2">
+            {currentPage > 1 && (
+              <Link
+                href={`/chamados?${new URLSearchParams({ ...(status ? { status } : {}), ...(urgency ? { urgency } : {}), page: String(currentPage - 1) }).toString()}`}
+                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Anterior
+              </Link>
+            )}
+            {currentPage < totalPages && (
+              <Link
+                href={`/chamados?${new URLSearchParams({ ...(status ? { status } : {}), ...(urgency ? { urgency } : {}), page: String(currentPage + 1) }).toString()}`}
+                className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Proxima
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

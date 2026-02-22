@@ -25,6 +25,17 @@ export async function createTraining(formData: FormData) {
     return { error: "Titulo e obrigatorio." };
   }
 
+  if (videoUrl) {
+    try {
+      const url = new URL(videoUrl);
+      if (!["http:", "https:"].includes(url.protocol)) {
+        return { error: "URL do video invalida. Use http:// ou https://" };
+      }
+    } catch {
+      return { error: "URL do video invalida." };
+    }
+  }
+
   await prisma.training.create({
     data: {
       tenantId,

@@ -8,6 +8,7 @@ import { ServiceType } from "@prisma/client";
 import { safeFormGet, serviceTypeSchema, dateSchema, positiveDecimalSchema, positiveIntSchema, urlSchema } from "@/lib/validation";
 import { planAllows } from "@/lib/auth/plan-features";
 import { createServiceOrderInTx } from "@/lib/service-order";
+import { logAudit } from "@/lib/audit";
 
 const SERVICE_TYPE_TO_LEGACY: Record<string, string> = {
   PREVENTIVA: "Manutencao Preventiva Geral",
@@ -23,7 +24,7 @@ export async function createPreventiveAction(
 }
 
 export async function createPreventive(formData: FormData) {
-  const { tenantId, plan } = await checkPermission("preventive.create");
+  const { tenantId, userId, plan } = await checkPermission("preventive.create");
 
   const equipmentId = formData.get("equipmentId") as string;
   const serviceType = (formData.get("serviceType") as string) || "PREVENTIVA";
@@ -69,7 +70,7 @@ export async function createPreventive(formData: FormData) {
     providerName = prov?.name;
   }
 
-  await prisma.$transaction(async (tx) => {
+  const createdMaintenance = await prisma.$transaction(async (tx) => {
     const maintenance = await tx.preventiveMaintenance.create({
       data: {
         tenantId,
@@ -88,7 +89,11 @@ export async function createPreventive(formData: FormData) {
     await createServiceOrderInTx(tx, tenantId, {
       preventiveMaintenanceId: maintenance.id,
     });
+
+    return maintenance;
   });
+
+  await logAudit({ tenantId, userId, action: "CREATE", entity: "maintenance", entityId: createdMaintenance.id });
 
   revalidatePath("/manutencoes");
   revalidatePath("/ordens-servico");
@@ -202,16 +207,20 @@ export async function executePreventive(id: string, formData: FormData) {
     }
   });
 
+  await logAudit({ tenantId, userId, action: "UPDATE", entity: "maintenance", entityId: id });
+
   revalidatePath("/manutencoes");
   redirect("/manutencoes");
 }
 
 export async function deletePreventive(id: string) {
-  const { tenantId } = await checkPermission("preventive.delete");
+  const { tenantId, userId } = await checkPermission("preventive.delete");
 
   await prisma.preventiveMaintenance.delete({
     where: { id, tenantId },
   });
+
+  await logAudit({ tenantId, userId, action: "DELETE", entity: "maintenance", entityId: id });
 
   revalidatePath("/manutencoes");
   redirect("/manutencoes");

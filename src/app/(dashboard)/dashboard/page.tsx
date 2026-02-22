@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/require-role";
 import { planAllows } from "@/lib/auth/plan-features";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   getEquipmentByStatus,
   getEquipmentByCriticality,
@@ -12,17 +13,16 @@ import {
   getCalibrationStatus,
   getServiceTypeStatus,
 } from "./dashboard-data";
-import {
-  EquipmentByStatusChart,
-  EquipmentByCriticalityChart,
-  MaintenanceByMonthChart,
-  TicketsByUrgencyChart,
-  CalibrationStatusChart,
-} from "./dashboard-charts";
 import { serviceTypeLabel } from "@/lib/utils/periodicity";
 import { computeGlobalMtbfMttr, formatHours } from "@/lib/mtbf-mttr";
 import { computeDepreciationSummary, formatBRL } from "@/lib/depreciation";
 import { PgtsExportButton } from "./pgts-export-button";
+
+const EquipmentByStatusChart = dynamic(() => import("./dashboard-charts").then(m => ({ default: m.EquipmentByStatusChart })), { loading: () => <div className="h-[250px] animate-pulse rounded-lg bg-gray-100" /> });
+const EquipmentByCriticalityChart = dynamic(() => import("./dashboard-charts").then(m => ({ default: m.EquipmentByCriticalityChart })), { loading: () => <div className="h-[250px] animate-pulse rounded-lg bg-gray-100" /> });
+const MaintenanceByMonthChart = dynamic(() => import("./dashboard-charts").then(m => ({ default: m.MaintenanceByMonthChart })), { loading: () => <div className="h-[250px] animate-pulse rounded-lg bg-gray-100" /> });
+const TicketsByUrgencyChart = dynamic(() => import("./dashboard-charts").then(m => ({ default: m.TicketsByUrgencyChart })), { loading: () => <div className="h-[250px] animate-pulse rounded-lg bg-gray-100" /> });
+const CalibrationStatusChart = dynamic(() => import("./dashboard-charts").then(m => ({ default: m.CalibrationStatusChart })), { loading: () => <div className="h-[250px] animate-pulse rounded-lg bg-gray-100" /> });
 
 interface PageProps {
   searchParams: Promise<{ upgrade?: string }>;
@@ -98,12 +98,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       orderBy: { openedAt: "desc" },
       take: 5,
     }),
-    getEquipmentByStatus(),
-    getEquipmentByCriticality(),
-    getMaintenanceByMonth(),
-    getTicketsByUrgency(),
-    getCalibrationStatus(),
-    getServiceTypeStatus(),
+    getEquipmentByStatus(tenantId),
+    getEquipmentByCriticality(tenantId),
+    getMaintenanceByMonth(tenantId),
+    getTicketsByUrgency(tenantId),
+    getCalibrationStatus(tenantId),
+    getServiceTypeStatus(tenantId),
     prisma.correctiveMaintenance.findMany({
       where: {
         tenantId,

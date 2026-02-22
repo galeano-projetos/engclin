@@ -5,29 +5,32 @@ import { checkPermission } from "@/lib/auth/require-role";
 import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
 import { userRoleSchema, emailSchema, passwordSchema } from "@/lib/validation";
+import { logAudit } from "@/lib/audit";
 
 // ============================================================
 // Gestao de Unidades
 // ============================================================
 
 export async function createUnit(formData: FormData) {
-  const { tenantId } = await checkPermission("admin.units");
+  const { tenantId, userId } = await checkPermission("admin.units");
   const name = formData.get("name") as string;
 
   if (!name?.trim()) {
     return { error: "Nome da unidade e obrigatorio" };
   }
 
-  await prisma.unit.create({
+  const created = await prisma.unit.create({
     data: { tenantId, name: name.trim() },
   });
+
+  await logAudit({ tenantId, userId, action: "CREATE", entity: "unit", entityId: created.id });
 
   revalidatePath("/admin");
   return { success: true };
 }
 
 export async function deleteUnit(unitId: string) {
-  const { tenantId } = await checkPermission("admin.units");
+  const { tenantId, userId } = await checkPermission("admin.units");
 
   // Verificar se ha equipamentos vinculados
   const equipCount = await prisma.equipment.count({
@@ -41,6 +44,9 @@ export async function deleteUnit(unitId: string) {
   }
 
   await prisma.unit.delete({ where: { id: unitId, tenantId } });
+
+  await logAudit({ tenantId, userId, action: "DELETE", entity: "unit", entityId: unitId });
+
   revalidatePath("/admin");
   return { success: true };
 }
@@ -50,7 +56,7 @@ export async function deleteUnit(unitId: string) {
 // ============================================================
 
 export async function createUser(formData: FormData) {
-  const { tenantId } = await checkPermission("admin.users");
+  const { tenantId, userId } = await checkPermission("admin.users");
 
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
@@ -89,7 +95,7 @@ export async function createUser(formData: FormData) {
 
   const hashedPassword = await hash(password, 10);
 
-  await prisma.user.create({
+  const createdUser = await prisma.user.create({
     data: {
       tenantId,
       name: name.trim(),
@@ -100,15 +106,17 @@ export async function createUser(formData: FormData) {
     },
   });
 
+  await logAudit({ tenantId, userId, action: "CREATE", entity: "user", entityId: createdUser.id });
+
   revalidatePath("/admin");
   return { success: true };
 }
 
-export async function toggleUserActive(userId: string) {
-  const { tenantId } = await checkPermission("admin.users");
+export async function toggleUserActive(targetUserId: string) {
+  const { tenantId, userId } = await checkPermission("admin.users");
 
   const user = await prisma.user.findFirst({
-    where: { id: userId, tenantId },
+    where: { id: targetUserId, tenantId },
   });
 
   if (!user) {
@@ -125,9 +133,11 @@ export async function toggleUserActive(userId: string) {
   }
 
   await prisma.user.update({
-    where: { id: userId, tenantId },
+    where: { id: targetUserId, tenantId },
     data: { active: !user.active },
   });
+
+  await logAudit({ tenantId, userId, action: "UPDATE", entity: "user", entityId: targetUserId, changes: { active: { old: user.active, new: !user.active } } });
 
   revalidatePath("/admin");
   return { success: true };
@@ -148,6 +158,16 @@ export async function getAdminData() {
     }),
     prisma.user.findMany({
       where: { tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        specialty: true,
+        createdAt: true,
+        mustChangePassword: true,
+      },
       orderBy: [{ active: "desc" }, { name: "asc" }],
     }),
     prisma.tenant.findUnique({

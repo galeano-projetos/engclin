@@ -122,6 +122,8 @@ export interface NavPermissions {
   treinamentos: boolean;
   relatorios: boolean;
   pgts: boolean;
+  tecnovigilancia: boolean;
+  melhoria: boolean;
   inteligencia: boolean;
   admin: boolean;
 }
@@ -137,6 +139,8 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     treinamentos: hasPermission(role, "training.view"),
     relatorios: hasPermission(role, "report.view"),
     pgts: hasPermission(role, "pgts.view"),
+    tecnovigilancia: hasPermission(role, "ticket.view"),
+    melhoria: hasPermission(role, "ticket.view"),
     inteligencia: hasPermission(role, "ai.view"),
     admin: hasPermission(role, "admin.users"),
   };
@@ -149,6 +153,8 @@ export function getNavPermissions(role: UserRole, plan?: Plan): NavPermissions {
     ordensServico: roleBased.ordensServico && planAllows(plan, "os.view"),
     fisicaMedica: roleBased.fisicaMedica && planAllows(plan, "physics.view"),
     treinamentos: roleBased.treinamentos && planAllows(plan, "training.view"),
+    tecnovigilancia: roleBased.tecnovigilancia && planAllows(plan, "ticket.view"),
+    melhoria: roleBased.melhoria && planAllows(plan, "ticket.view"),
     inteligencia: roleBased.inteligencia && planAllows(plan, "ai.view"),
   };
 }

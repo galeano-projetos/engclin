@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 /**
  * GET /api/stats
@@ -16,10 +16,9 @@ export async function GET() {
       prisma.tenant.count({ where: { active: true } }),
     ]);
 
-    return NextResponse.json({
-      totalEquipments,
-      totalTenants,
-    });
+    const response = NextResponse.json({ totalEquipments, totalTenants });
+    response.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=1800");
+    return response;
   } catch {
     return NextResponse.json({ totalEquipments: 0, totalTenants: 0 });
   }

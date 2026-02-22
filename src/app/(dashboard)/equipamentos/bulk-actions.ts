@@ -34,9 +34,17 @@ export async function bulkSchedulePreventive(formData: FormData): Promise<{ erro
     return { error: "TSE nao disponivel no seu plano." };
   }
 
-  const equipmentIds = JSON.parse(equipmentIdsRaw) as string[];
-  if (equipmentIds.length === 0) {
-    return { error: "Selecione ao menos um equipamento." };
+  let equipmentIds: string[];
+  try {
+    equipmentIds = JSON.parse(equipmentIdsRaw);
+  } catch {
+    return { error: "Dados invalidos." };
+  }
+  if (!Array.isArray(equipmentIds) || equipmentIds.length === 0) {
+    return { error: "Nenhum equipamento selecionado." };
+  }
+  if (equipmentIds.length > 100) {
+    return { error: "Maximo de 100 equipamentos por operacao." };
   }
 
   // Validate all equipment belongs to tenant
