@@ -1,20 +1,16 @@
 "use client";
 
 import { SystemMockup } from "../components/system-mockup";
+import { CircuitCanvas } from "../components/circuit-canvas";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-navy-950 pt-16">
-      {/* Background layer */}
-      <div className="absolute inset-0">
-        <div className="h-full w-full animate-hero-zoom bg-gradient-to-br from-slate-800 via-navy-900 to-slate-950" />
-      </div>
+      {/* Interactive circuit board background */}
+      <CircuitCanvas className="absolute inset-0 z-0" />
 
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-navy-950/80 via-navy-900/70 to-navy-950/90" />
-
-      {/* Subtle dot pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.03)_1px,transparent_0)] bg-[size:40px_40px]" />
+      {/* Gradient overlay for depth */}
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-navy-950/40 via-transparent to-navy-950/70" />
 
       {/* Content */}
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center px-4 text-center sm:px-6">
@@ -115,10 +111,10 @@ export function Hero() {
 
       {/* System mockup */}
       <div
-        className="relative z-10 mx-auto max-w-4xl px-4 pb-24 opacity-0"
+        className="relative z-10 mx-auto max-w-5xl px-4 pb-24 opacity-0"
         style={{ animation: "fade-in-up 0.6s ease-out 1s both" }}
       >
-        <SystemMockup variant="light" title="Dashboard" className="shadow-2xl shadow-teal-500/10" />
+        <SystemMockup className="shadow-2xl shadow-teal-500/10" />
       </div>
     </section>
   );
